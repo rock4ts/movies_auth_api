@@ -13,11 +13,6 @@ from api.role import router as role_router
 from core.config import settings
 from db import redis, postgres
 
-combined_router = APIRouter()
-combined_router.include_router(auth_router)
-combined_router.include_router(account_router)
-combined_router.include_router(role_router, prefix='/role')
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -39,11 +34,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     lifespan=lifespan,
+    root_path="/auth",
 )
-app.include_router(
-    combined_router,
-    prefix="/auth"
-)
+app.include_router(auth_router)
+app.include_router(account_router)
+app.include_router(role_router, prefix='/role')
 
 
 @app.exception_handler(AuthJWTException)

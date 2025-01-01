@@ -72,7 +72,7 @@ cd tests/functional && make up
 
 Наш сервис поддерживает документацию OpenAPI Swagger по адресу:
 
-http://127.0.0.1/api/openapi
+http://127.0.0.1/api/docs
 
 ## Состав команды
 
