@@ -43,12 +43,3 @@ async def validate_auth_user_login(
     if not user.check_password(password):
         raise unauth_exc
     return user
-
-
-async def get_user_by_email(
-        email: str,
-        session: AsyncSession,
-) -> User:
-    result = await session.execute(select(User).where(User.email == email))
-    existing_user = result.scalars().first()
-    return existing_user
