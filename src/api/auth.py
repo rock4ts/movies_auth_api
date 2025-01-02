@@ -98,7 +98,10 @@ async def refresh(
         new_access_token = await authorize.create_access_token(
             subject=current_user, user_claims=payload
         )
-        return TokenInfo(access=new_access_token)
+        new_refresh_token = await authorize.create_refresh_token(
+            subject=current_user, user_claims=payload
+        )
+        return TokenInfo(access=new_access_token, refresh=new_refresh_token)
     except Exception:
         raise HTTPException(status_code=401, detail="Refresh token invalid")
 
