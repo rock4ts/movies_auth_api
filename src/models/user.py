@@ -11,7 +11,7 @@ class User(Base):
     __tablename__ = "users"
 
     password: Mapped[str] = mapped_column(nullable=False)
-    email: Mapped[str] = mapped_column(nullable=False)
+    email: Mapped[str] = mapped_column(nullable=False, unique=True)
     first_name: Mapped[str] = mapped_column(nullable=False, default="")
     last_name: Mapped[str] = mapped_column(nullable=False, default="")
 
