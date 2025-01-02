@@ -61,7 +61,12 @@ async def login(
     except AttributeError:
         roles_claim = None
 
-    claims = {"roles": roles_claim}
+    claims = {
+        "email": validated_user.email,
+        "first_name": validated_user.first_name,
+        "last_name": validated_user.last_name,
+        "roles": roles_claim
+    }
     # Создание токенов
     access_token = await authorize.create_access_token(
         subject=str(validated_user.id), user_claims=claims
