@@ -40,6 +40,11 @@ class RedisConfig(BaseModel):
     port: int = 6379
 
 
+class JaegerConfig(BaseModel):
+    host: str = 'localhost'
+    port: int = 4317
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(".env.example", ".env"),
@@ -52,6 +57,7 @@ class Settings(BaseSettings):
     authjwt_secret_key: str
     authjwt_algorithm: str = "HS256"
     redis: RedisConfig = RedisConfig()
+    jaeger: JaegerConfig = JaegerConfig()
 
 
 settings = Settings()

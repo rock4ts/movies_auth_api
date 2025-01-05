@@ -6,6 +6,12 @@ from redis.asyncio import Redis
 from async_fastapi_jwt_auth.exceptions import AuthJWTException
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse, ORJSONResponse
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+
 
 from api.account import router as account_router
 from api.auth import router as auth_router
@@ -32,6 +38,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await postgres.pg_helper.dispose()
 
 
+def configure_tracer() -> None:
+    trace.set_tracer_provider(TracerProvider())
+    otlp_exporter = OTLPSpanExporter(
+        endpoint=f"http://{settings.jaeger.host}:{settings.jaeger.port}"
+    )
+    trace.get_tracer_provider().add_span_processor(
+        BatchSpanProcessor(otlp_exporter)
+    )
+    trace.get_tracer_provider().add_span_processor(
+        BatchSpanProcessor(ConsoleSpanExporter())
+    )
+
+
+configure_tracer()
 app = FastAPI(
     lifespan=lifespan,
     root_path="/auth",
@@ -39,6 +59,7 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(role_router, prefix='/role')
+FastAPIInstrumentor.instrument_app(app)
 
 
 @app.exception_handler(AuthJWTException)
@@ -49,10 +70,15 @@ def authjwt_exception_handler(request: Request, exc: AuthJWTException):
 
 @app.middleware('http')
 async def before_request(request: Request, call_next):
-    response = await call_next(request)
+    client_ip = request.headers.get('X-Real-IP', '').lower()
+    is_local = client_ip in {'localhost', '127.0.0.1', '', None}
     request_id = request.headers.get('X-Request-Id')
-    if not request_id:
+
+    # Не используем трассировкy локальных запросов
+    if not is_local and not request_id:
         return ORJSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={'detail': 'X-Request-Id is required'})
+
+    response = await call_next(request)
     return response 
 
 
