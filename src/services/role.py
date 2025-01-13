@@ -54,7 +54,7 @@ class RoleService:
     ) -> tuple[ServiceWorkResults, str | None]:
         try:
             role_data = role_dto.model_dump()
-            await repository.update(models.Role, models.Role.id, role_id, role_data)
+            await repository.update(models.Role, [models.Role.id == role_id,], role_data)
             return ServiceWorkResults.SUCCESS, "ok"
         except sa_exc.NoResultFound as e:
             logger.exception(f"NoResultFound: {e}")
@@ -86,7 +86,7 @@ class RoleService:
     ) -> tuple[ServiceWorkResults, str | None]:
         try:
             await repository.update(
-                models.User, models.User.id, user_id, {models.User.role_id.name: role_id}
+                models.User, [models.User.id == user_id,], {models.User.role_id.name: role_id}
             )
             return ServiceWorkResults.SUCCESS, "ok"
         except sa_exc.NoResultFound as e:
@@ -105,7 +105,7 @@ class RoleService:
     ) -> tuple[ServiceWorkResults, str | None]:
         try:
             await repository.update(
-                models.User, models.User.id, user_id, {models.User.role_id.name: None}
+                models.User, [models.User.id == user_id,], {models.User.role_id.name: None}
             )
             return ServiceWorkResults.SUCCESS, "ok"
         except sa_exc.NoResultFound as e:
