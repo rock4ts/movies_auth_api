@@ -1,8 +1,10 @@
+import base64
+from functools import cached_property
 from logging import config as logging_config
 from pathlib import Path
 
 from async_fastapi_jwt_auth import AuthJWT
-from pydantic import BaseModel, PostgresDsn
+from pydantic import BaseModel, HttpUrl, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from core.logger import LOGGING
@@ -45,6 +47,20 @@ class JaegerConfig(BaseModel):
     port: int = 4317
 
 
+class OAuthYandexConfig(BaseModel):
+    auth_url: HttpUrl = "https://oauth.yandex.ru/authorize"
+    token_url: HttpUrl = "https://oauth.yandex.ru/token"
+    user_info_url: HttpUrl = "https://login.yandex.ru/info"
+    redirect_url: HttpUrl = "https://oauth.yandex.ru/verification_code" # for tests
+    client_id: str = None
+    client_secret: str = None
+
+    @cached_property
+    def auth_header(self) -> str:
+        client_data = base64.b64encode(f"{self.client_id}:{self.client_secret}".encode()).decode()  # noqa: E501
+        return f"Basic {client_data}"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(".env.example", ".env"),
@@ -58,6 +74,7 @@ class Settings(BaseSettings):
     authjwt_algorithm: str = "HS256"
     redis: RedisConfig
     jaeger: JaegerConfig
+    oauth_yandex: OAuthYandexConfig
 
 
 settings = Settings()
