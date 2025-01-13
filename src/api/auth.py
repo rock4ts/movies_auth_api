@@ -1,3 +1,4 @@
+from fastapi.responses import RedirectResponse
 from redis.asyncio import Redis
 from async_fastapi_jwt_auth import AuthJWT
 from async_fastapi_jwt_auth.auth_jwt import AuthJWTBearer
@@ -22,6 +23,8 @@ from .dependencies import (
     check_superuser,
     get_sqlalchemy_repository,
     check_invalid_token as check_invalid_token_depcy
+    cache_yandexid_login_params,
+    get_yandexid_api_redirect
 )
 
 router = APIRouter()
@@ -142,3 +145,16 @@ async def supervised_login(
         raise Http400(res_msg)
 
     return token_pair
+
+
+@router.get("/yandex/login")
+async def login_yandex(
+    login_data_cached: bool = Depends(cache_yandexid_login_params),
+    redirect = Depends(get_yandexid_api_redirect),  # noqa: ANN001 as per https://github.com/fastapi/fastapi/discussions/9897
+) -> RedirectResponse:
+
+    if not login_data_cached:
+        raise Http500
+
+    return redirect
+
