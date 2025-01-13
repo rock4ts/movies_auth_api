@@ -1,0 +1,2 @@
+class YandexIdRequestError(Exception):
+    pass

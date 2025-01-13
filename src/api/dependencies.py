@@ -3,6 +3,8 @@ from uuid import uuid4
 
 import backoff
 from fastapi.responses import RedirectResponse
+import httpx
+from pydantic import UUID4, BaseModel, HttpUrl, ValidationError
 import user_agents
 from async_fastapi_jwt_auth import AuthJWT
 from fastapi import HTTPException, Request, status
@@ -14,10 +16,16 @@ from core.config import Settings, settings
 from db.postgres import PostgresHelper, get_pg_helper
 from db.redis import get_redis_connection
 from db.repository import AsyncBaseRepository, AsyncSqlAlchemyRepository
-from services.auth.yandex.schemas import YandexIdLoginRequestParams
+from services.auth.yandex.schemas import (
+    HttpRequestComponents,
+    YandexIdLoginRequestParams,
+    YandexIdTokenRequestData,
+    YandexIdUserRequestParams
+)
 from schemas.enums import SystemRoles
 from services.auth.yandex.enums import YandexAuthRedisPrefix
 from services.role import RoleService
+from .exceptions import Http400, Http500
 
 
 def get_app_settings() -> Settings:
@@ -26,6 +34,11 @@ def get_app_settings() -> Settings:
 
 def get_role_service() -> RoleService:
     return RoleService
+
+
+async def get_http_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+    async with httpx.AsyncClient() as http_client:
+        yield http_client
 
 
 async def get_session(
@@ -129,4 +142,55 @@ async def cache_yandexid_login_params(
     result = await redis.setex(
         f"{YandexAuthRedisPrefix.YALOGIN}:{login_params.state}", 660, login_params_json
     )
+    return result
 
+
+@backoff.on_exception(backoff.expo, ConnectionError, max_time=15)
+async def get_cached_yandex_login_data(
+    state: UUID4,
+    redis: Redis = Depends(get_redis_connection)
+) -> YandexIdLoginRequestParams:
+    login_params_json = await redis.get(f"{YandexAuthRedisPrefix.YALOGIN}:{state}")
+    if login_params_json is None:
+        raise Http400(f"Failed to find login data for state '{state}'")
+    
+    try:
+        login_params = YandexIdLoginRequestParams.model_validate_json(login_params_json)
+    except ValidationError:
+        raise Http500
+
+    return login_params
+
+
+async def get_yandexid_token_request_data(
+    code: str,
+    cached_login_data: YandexIdLoginRequestParams = Depends(get_cached_yandex_login_data)
+) -> YandexIdTokenRequestData:
+    login_data_dict = cached_login_data.model_dump(exclude_none=True)
+    try:
+        token_request_data = YandexIdTokenRequestData(code=code, **login_data_dict)
+    except ValidationError:
+        raise Http500
+    
+    return token_request_data
+
+
+async def get_yandexid_token_request_components(
+    app_settings: Settings = Depends(get_app_settings),
+    request_data: YandexIdTokenRequestData = Depends(get_yandexid_token_request_data),
+) -> HttpRequestComponents:
+    return HttpRequestComponents(
+        url=app_settings.oauth_yandex.token_url,
+        data=request_data.model_dump(exclude_none=True),
+        headers={"Authorization": app_settings.oauth_yandex.auth_header}
+    )
+
+
+async def get_yandexid_user_request_components(
+    app_settings: Settings = Depends(get_app_settings),
+    request_params: YandexIdUserRequestParams = Depends()
+) -> HttpRequestComponents:
+    return HttpRequestComponents(
+        url=app_settings.oauth_yandex.user_info_url,
+        params=request_params.model_dump(exclude_none=True)
+    )
