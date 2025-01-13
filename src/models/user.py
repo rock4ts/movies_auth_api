@@ -1,4 +1,7 @@
 import datetime
+import string
+from secrets import choice as secrets_choice
+
 from passlib.handlers.pbkdf2 import pbkdf2_sha256
 from pydantic import UUID4
 from sqlalchemy import JSON, ForeignKey, TIMESTAMP
@@ -25,7 +28,9 @@ class User(Base):
     )
     oauth_accounts: Mapped[set["OAuthAccount"]] = relationship(back_populates="user")
 
-    def set_password(self, raw_password: str) -> None:
+    def set_password(self, raw_password: str | None = None) -> None:
+        if raw_password is None:
+            raw_password = self.generate_random_password()
         self.password = pbkdf2_sha256.hash(raw_password)
 
     def check_password(self, raw_password: str) -> bool:
@@ -33,6 +38,12 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"
+
+    @staticmethod
+    def generate_random_password() -> str:
+        alphabet = string.ascii_letters + string.digits
+        return "".join(secrets_choice(alphabet) for _ in range(16))
+
 
 class OAuthAccount(Base):
     __tablename__ = "oauth_accounts"
