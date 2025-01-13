@@ -1,7 +1,7 @@
 import datetime
 from passlib.handlers.pbkdf2 import pbkdf2_sha256
 from pydantic import UUID4
-from sqlalchemy import ForeignKey, TIMESTAMP
+from sqlalchemy import JSON, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -23,6 +23,7 @@ class User(Base):
         default=datetime.datetime.now(datetime.timezone.utc),
         onupdate=datetime.datetime.now(datetime.timezone.utc),
     )
+    oauth_accounts: Mapped[set["OAuthAccount"]] = relationship(back_populates="user")
 
     def set_password(self, raw_password: str) -> None:
         self.password = pbkdf2_sha256.hash(raw_password)
@@ -32,6 +33,22 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"
+
+class OAuthAccount(Base):
+    __tablename__ = "oauth_accounts"
+
+    user_id: Mapped[UUID4] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    user: Mapped[User] = relationship(back_populates="oauth_accounts")
+
+    provider: Mapped[str]
+    external_user_id: Mapped[str]
+    access_data: Mapped[str] = mapped_column(JSON)
+
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        default=datetime.datetime.now(datetime.timezone.utc),
+        onupdate=datetime.datetime.now(datetime.timezone.utc),
+    )
 
 
 class Role(Base):
