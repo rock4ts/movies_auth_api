@@ -24,7 +24,7 @@ from db import redis, postgres
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # startup
     redis.redis_client = Redis(
-        host=settings.redis.url, port=settings.redis.port
+        host=settings.redis.host, port=settings.redis.port
     )
     postgres.pg_helper = postgres.PostgresHelper(
         url=str(settings.db.url),

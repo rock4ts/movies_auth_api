@@ -36,7 +36,7 @@ class DatabaseConfig(BaseModel):
 
 
 class RedisConfig(BaseModel):
-    url: str = "localhost"
+    host: str = "localhost"
     port: int = 6379
 
 
@@ -56,8 +56,8 @@ class Settings(BaseSettings):
     db: DatabaseConfig
     authjwt_secret_key: str
     authjwt_algorithm: str = "HS256"
-    redis: RedisConfig = RedisConfig()
-    jaeger: JaegerConfig = JaegerConfig()
+    redis: RedisConfig
+    jaeger: JaegerConfig
 
 
 settings = Settings()
