@@ -1,6 +1,8 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+import sqlalchemy.exc as sa_exc
 import uvicorn
 from async_fastapi_jwt_auth.exceptions import AuthJWTException
 from fastapi import FastAPI, Request, status
@@ -11,12 +13,42 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from redis.asyncio import Redis
+from sqlalchemy import select
 
 from api.account import router as account_router
 from api.auth import router as auth_router
 from api.role import router as role_router
 from core.config import settings
 from db import postgres, redis
+from models import Role, User
+
+logger = logging.getLogger(__name__)
+
+
+async def create_superuser(pg_helper: postgres.PostgresHelper) -> None:
+    async with pg_helper.session_factory() as session:
+        role_q = await session.execute(
+            select(Role).where(Role.title == settings.superuser.role_title)
+        )
+        superuser_role = role_q.scalars().first()
+
+        if superuser_role is None:
+            superuser_role = Role(
+                title=settings.superuser.role_title,
+                system_role=True
+            )
+        superuser = User(
+            email=settings.superuser.email,
+            first_name=settings.superuser.first_name,
+            last_name=settings.superuser.last_name,
+            role=superuser_role
+        )
+        superuser.set_password(settings.superuser.password)
+        session.add(superuser)
+        try:
+            await session.commit()
+        except sa_exc.IntegrityError as e:
+            logger.error(str(e))
 
 
 @asynccontextmanager
@@ -32,6 +64,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         pool_size=settings.db.pool_size,
         max_overflow=settings.db.max_overflow,
     )
+    await create_superuser(postgres.pg_helper)
+
     yield
     # shutdown
     await postgres.pg_helper.dispose()

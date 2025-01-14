@@ -4,8 +4,10 @@ from logging import config as logging_config
 from pathlib import Path
 
 from async_fastapi_jwt_auth import AuthJWT
-from pydantic import BaseModel, HttpUrl, PostgresDsn
+from pydantic import BaseModel, Field, HttpUrl, PostgresDsn
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from schemas.enums import SystemRoles
 
 from core.logger import LOGGING
 
@@ -35,6 +37,15 @@ class DatabaseConfig(BaseModel):
         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
         "pk": "pk_%(table_name)s",
     }
+
+
+@pydantic_dataclass
+class SuperuserCredentials:
+    email: str
+    first_name: str
+    last_name: str
+    password: str
+    role_title: str = SystemRoles.SUPERUSER
 
 
 class RedisConfig(BaseModel):
@@ -70,6 +81,7 @@ class Settings(BaseSettings):
     )
     run: RunConfig = RunConfig()
     db: DatabaseConfig
+    superuser: SuperuserCredentials
     authjwt_secret_key: str
     authjwt_algorithm: str = "HS256"
     redis: RedisConfig
