@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import uvicorn
-from redis.asyncio import Redis
 from async_fastapi_jwt_auth.exceptions import AuthJWTException
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse, ORJSONResponse
@@ -11,13 +10,13 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-
+from redis.asyncio import Redis
 
 from api.account import router as account_router
 from api.auth import router as auth_router
 from api.role import router as role_router
 from core.config import settings
-from db import redis, postgres
+from db import postgres, redis
 
 
 @asynccontextmanager
