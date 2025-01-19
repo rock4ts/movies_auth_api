@@ -23,15 +23,15 @@ from services.users import create_user as services_create_user, get_user_by_emai
 from services.users import validate_auth_user_login
 
 from .dependencies import (
+    cache_oauth_login_params,
     get_http_client,
+    get_oauth_login_redirect,
     get_session,
     check_superuser,
     get_sqlalchemy_repository,
     check_invalid_token as check_invalid_token_depcy,
-    cache_yandexid_login_params,
     get_yandexid_token_request_components,
     get_yandexid_user_request_components,
-    get_yandexid_api_redirect
 )
 
 router = APIRouter()
@@ -154,15 +154,10 @@ async def supervised_login(
     return token_pair
 
 
-@router.get("/yandex/login")
-async def login_yandex(
-    login_data_cached: bool = Depends(cache_yandexid_login_params),
-    redirect = Depends(get_yandexid_api_redirect),  # noqa: ANN001 as per https://github.com/fastapi/fastapi/discussions/9897
+@router.get("/{provider}/login", dependencies=[Depends(cache_oauth_login_params),])
+async def oauth_login(
+    redirect = Depends(get_oauth_login_redirect),  # noqa: ANN001 as per https://github.com/fastapi/fastapi/discussions/9897
 ) -> RedirectResponse:
-
-    if bool(login_data_cached) is False:
-        raise Http500
-
     return redirect
 
 

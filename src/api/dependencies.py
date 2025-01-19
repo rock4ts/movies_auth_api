@@ -4,7 +4,7 @@ from uuid import uuid4
 import backoff
 from fastapi.responses import RedirectResponse
 import httpx
-from pydantic import UUID4, BaseModel, HttpUrl, ValidationError
+from pydantic import UUID4, BaseModel, ValidationError
 import user_agents
 from async_fastapi_jwt_auth import AuthJWT
 from fastapi import HTTPException, Request, status
@@ -22,7 +22,7 @@ from services.auth.yandex.schemas import (
     YandexIdTokenRequestData,
     YandexIdUserRequestParams
 )
-from schemas.enums import SystemRoles
+from schemas.enums import OAuthProviders, SystemRoles
 from services.auth.yandex.enums import YandexAuthRedisPrefix
 from services.role import RoleService
 from .exceptions import Http400, Http500
@@ -90,27 +90,38 @@ async def check_superuser(
         )
 
 
-def get_yandexid_login_url_params(
+def get_oauth_login_params(
+    provider: str,
     request: Request,
     app_settings: Settings = Depends(get_app_settings)
-) -> YandexIdLoginRequestParams:
-    params_dict = {"client_id": app_settings.oauth_yandex.client_id}
-
-    if user_agent := request.headers.get("User-Agent"):
-        params_dict.update(
-            {"device_name": str(user_agents.parse(user_agent)), "device_id": uuid4()}
+) -> BaseModel:
+    if provider == OAuthProviders.YANDEX:
+        return get_yandexid_login_params(
+            app_settings.oauth_yandex.client_id,
+            request.headers.get("User-Agent")
         )
-    
-    return YandexIdLoginRequestParams(**params_dict)
 
 
-def compile_yandexid_login_url(
-    app_settings: Settings = Depends(get_app_settings),
-    login_params: YandexIdLoginRequestParams = Depends(get_yandexid_login_url_params),
-) -> HttpUrl:
-    result_url = app_settings.oauth_yandex.auth_url
+def get_oauth_login_cache_key(
+    provider: str,
+    oauth_login_params: BaseModel = Depends(get_oauth_login_params)
+) -> str:
+    if provider == OAuthProviders.YANDEX:
+        return f"{YandexAuthRedisPrefix.YALOGIN}:{oauth_login_params.state}"
+
+
+def get_oauth_login_url(
+    provider: str,
+    login_params: BaseModel | None = Depends(get_oauth_login_params),
+    settings: Settings = Depends(get_app_settings)
+) -> str:
+    if provider == OAuthProviders.YANDEX:
+        result_url = settings.oauth_yandex.auth_url
+
+    if login_params is None:
+        return result_url
+
     login_params_dict = login_params.model_dump(mode="json", exclude_none=True)
-
     for i, kv in enumerate(login_params_dict.items()):
         k, v = kv
         if i == 0:
@@ -118,31 +129,46 @@ def compile_yandexid_login_url(
         else:
             result_url += f"&{k}={v}"
 
-    return result_url
+    return result_url 
 
 
-def get_yandexid_api_redirect(
+def get_yandexid_login_params(
+    client_id: str,
+    user_agent: str | None = None
+) -> YandexIdLoginRequestParams:
+    params_dict = {"client_id": client_id}
+
+    if user_agent:
+        params_dict.update(
+            {"device_name": str(user_agents.parse(user_agent)), "device_id": uuid4()}
+        )
+    
+    return YandexIdLoginRequestParams(**params_dict)
+
+
+def get_oauth_login_redirect(
+    provider: str,
+    redirect_url: str = Depends(get_oauth_login_url),
     settings: Settings = Depends(get_app_settings),
-    redirect_url: HttpUrl = Depends(compile_yandexid_login_url)
 ) -> RedirectResponse:
-    return RedirectResponse(
-        url=redirect_url,
-        status_code=302,
-        headers={"Authorization": settings.oauth_yandex.auth_header}
-    )
+    if provider == OAuthProviders.YANDEX:
+        return RedirectResponse(
+            url=redirect_url,
+            status_code=302,
+            headers={"Authorization": settings.oauth_yandex.auth_header}
+        )
 
 
 @backoff.on_exception(backoff.expo, ConnectionError, max_time=15, raise_on_giveup=False)
-async def cache_yandexid_login_params(
-    login_params: YandexIdLoginRequestParams = Depends(get_yandexid_login_url_params),
+async def cache_oauth_login_params(
+    cache_key: str = Depends(get_oauth_login_cache_key),
+    oauth_login_params: BaseModel = Depends(get_oauth_login_params),
     redis: Redis = Depends(get_redis_connection)
-) -> bool | None:
-    login_params_json = login_params.model_dump_json(exclude_none=True)
-    # Время жизни кода подтверждения - 10 минут, на минуту больше даём для авторизации
-    result = await redis.setex(
-        f"{YandexAuthRedisPrefix.YALOGIN}:{login_params.state}", 660, login_params_json
-    )
-    return result
+) -> None:
+    login_params_json = oauth_login_params.model_dump_json(exclude_none=True)
+    result = await redis.setex(cache_key, 660, login_params_json)
+    if bool(result) is False:
+        raise Http500
 
 
 @backoff.on_exception(backoff.expo, ConnectionError, max_time=15)
