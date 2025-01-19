@@ -14,6 +14,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from redis.asyncio import Redis
 from sqlalchemy import select
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.account import router as account_router
 from api.auth import router as auth_router
@@ -23,6 +24,37 @@ from db import postgres, redis
 from models import Role, User
 
 logger = logging.getLogger(__name__)
+
+
+def configure_tracer() -> None:
+    trace.set_tracer_provider(TracerProvider())
+    otlp_exporter = OTLPSpanExporter(
+        endpoint=f"http://{settings.jaeger.host}:{settings.jaeger.port}"
+    )
+    trace.get_tracer_provider().add_span_processor(
+        BatchSpanProcessor(otlp_exporter)
+    )
+    trace.get_tracer_provider().add_span_processor(
+        BatchSpanProcessor(ConsoleSpanExporter())
+    )
+
+
+async def trace_request(request: Request, call_next) -> None:
+    client_ip = request.headers.get('X-Real-IP', '').lower()
+    is_local = client_ip in {'localhost', '127.0.0.1', '', None}
+    request_id = request.headers.get('X-Request-Id', 'unknown')
+
+    # Не используем трассировкy локальных запросов
+    if not is_local and not request_id:
+        return ORJSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={'detail': 'X-Request-Id is required'}
+        )
+
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span(f"{request.method} {request.url.path}") as span:
+        span.set_attribute("http.request_id", request_id)
+        return await call_next(request)
 
 
 async def create_superuser(pg_helper: postgres.PostgresHelper) -> None:
@@ -67,24 +99,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await create_superuser(postgres.pg_helper)
 
     yield
+
     # shutdown
     await postgres.pg_helper.dispose()
 
 
-def configure_tracer() -> None:
-    trace.set_tracer_provider(TracerProvider())
-    otlp_exporter = OTLPSpanExporter(
-        endpoint=f"http://{settings.jaeger.host}:{settings.jaeger.port}"
-    )
-    trace.get_tracer_provider().add_span_processor(
-        BatchSpanProcessor(otlp_exporter)
-    )
-    trace.get_tracer_provider().add_span_processor(
-        BatchSpanProcessor(ConsoleSpanExporter())
-    )
-
-
-configure_tracer()
 app = FastAPI(
     lifespan=lifespan,
     root_path="/auth",
@@ -92,7 +111,6 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(role_router, prefix='/role')
-FastAPIInstrumentor.instrument_app(app)
 
 
 @app.exception_handler(AuthJWTException)
@@ -101,23 +119,10 @@ def authjwt_exception_handler(request: Request, exc: AuthJWTException):
         status_code=exc.status_code, content={"detail": exc.message}
     )
 
-@app.middleware('http')
-async def before_request(request: Request, call_next):
-    client_ip = request.headers.get('X-Real-IP', '').lower()
-    is_local = client_ip in {'localhost', '127.0.0.1', '', None}
-    request_id = request.headers.get('X-Request-Id', 'unknown')
-
-    # Не используем трассировкy локальных запросов
-    if not is_local and not request_id:
-        return ORJSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={'detail': 'X-Request-Id is required'}
-        )
-    
-    tracer = trace.get_tracer(__name__)
-    with tracer.start_as_current_span(f"{request.method} {request.url.path}") as span:
-        span.set_attribute("http.request_id", request_id)
-        return await call_next(request)
+if settings.jaeger.enable is True:
+    configure_tracer()
+    app.add_middleware(BaseHTTPMiddleware, trace_request)
+    FastAPIInstrumentor.instrument_app(app)
 
 
 if __name__ == "__main__":

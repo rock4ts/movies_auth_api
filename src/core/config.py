@@ -54,6 +54,7 @@ class RedisConfig(BaseModel):
 
 
 class JaegerConfig(BaseModel):
+    enable: bool = False
     host: str = 'localhost'
     port: int = 4317
 
