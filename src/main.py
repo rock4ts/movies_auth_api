@@ -5,8 +5,10 @@ from typing import AsyncGenerator
 import sqlalchemy.exc as sa_exc
 import uvicorn
 from async_fastapi_jwt_auth.exceptions import AuthJWTException
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse, ORJSONResponse
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -92,9 +94,9 @@ async def create_superuser(pg_helper: postgres.PostgresHelper) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # startup
-    redis.redis_client = Redis(
-        host=settings.redis.host, port=settings.redis.port
-    )
+    redis.redis_client = Redis(host=settings.redis.host, port=settings.redis.port)
+    await FastAPILimiter.init(redis.redis_client)
+
     postgres.pg_helper = postgres.PostgresHelper(
         url=str(settings.db.url),
         echo=settings.db.echo,
@@ -113,6 +115,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     lifespan=lifespan,
     root_path="/auth",
+    dependencies=[Depends(RateLimiter(times=5, seconds=5)),]
 )
 app.include_router(auth_router)
 app.include_router(account_router)
