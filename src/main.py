@@ -57,6 +57,12 @@ async def trace_request(request: Request, call_next) -> None:
         return await call_next(request)
 
 
+def handle_authjwt_exception(request: Request, exc: AuthJWTException) -> None:
+    return JSONResponse(
+        status_code=exc.status_code, content={"detail": exc.message}
+    )
+
+
 async def create_superuser(pg_helper: postgres.PostgresHelper) -> None:
     async with pg_helper.session_factory() as session:
         role_q = await session.execute(
@@ -111,13 +117,7 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(role_router, prefix='/role')
-
-
-@app.exception_handler(AuthJWTException)
-def authjwt_exception_handler(request: Request, exc: AuthJWTException):
-    return JSONResponse(
-        status_code=exc.status_code, content={"detail": exc.message}
-    )
+app.add_exception_handler(AuthJWTException, handle_authjwt_exception)
 
 if settings.jaeger.enable is True:
     configure_tracer()
