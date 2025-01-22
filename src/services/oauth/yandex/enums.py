@@ -1,4 +1,4 @@
-from enum import IntEnum, StrEnum, auto
+from enum import StrEnum, auto
 
 
 class UserAcquireMethod(StrEnum):
@@ -9,10 +9,3 @@ class UserAcquireMethod(StrEnum):
 class YandexAuthRedisPrefix(StrEnum):
     YALOGIN = auto()
     YATOKEN = auto()
-
-
-class YandexLoginServiceResult(IntEnum):
-    SUCCESS = 1
-    FAIL = 0
-    ERROR = -1
-    RECONCILE = 2

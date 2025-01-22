@@ -16,14 +16,14 @@ from core.config import Settings, settings
 from db.postgres import PostgresHelper, get_pg_helper
 from db.redis import get_redis_connection
 from db.repository import AsyncBaseRepository, AsyncSqlAlchemyRepository
-from services.auth.yandex.schemas import (
+from services.oauth.yandex.schemas import (
     HttpRequestComponents,
     YandexIdLoginRequestParams,
     YandexIdTokenRequestData,
     YandexIdUserRequestParams
 )
 from schemas.enums import OAuthProviders, SystemRoles
-from services.auth.yandex.enums import YandexAuthRedisPrefix
+from services.oauth.yandex.enums import YandexAuthRedisPrefix
 from services.role import RoleService
 from .exceptions import Http400, Http500
 

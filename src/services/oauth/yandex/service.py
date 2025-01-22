@@ -19,7 +19,7 @@ from ._utils import (
     get_or_create_yandex_user,
     update_oauth_account,
 )
-from .enums import UserAcquireMethod, YandexLoginServiceResult
+from .enums import UserAcquireMethod, OAuthLoginServiceResult
 from .schemas import HttpRequestComponents, YandexIdLoginServiceOutput
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ async def login(
     http_client: httpx.AsyncClient,
     token_request_components: HttpRequestComponents,
     user_request_components: HttpRequestComponents
-) -> tuple[YandexLoginServiceResult, YandexIdLoginServiceOutput | None, str | None]:
+) -> tuple[OAuthLoginServiceResult, YandexIdLoginServiceOutput | None, str | None]:
 
     try:
         yandex_token_data, yandex_user_data = await authorize_with_yandex(
@@ -40,7 +40,7 @@ async def login(
         )
     except YandexIdRequestError as e:
         logger.error(f"Yandex API error: {str(e)}")
-        return YandexLoginServiceResult.FAIL, None, "Failed to communicate with Yandex API"
+        return OAuthLoginServiceResult.FAIL, None, "Failed to communicate with Yandex API"
 
     try:
         user, user_acquired_by = await get_or_create_yandex_user(repository, yandex_user_data)
@@ -51,10 +51,10 @@ async def login(
             redis, yandex_token_data, yandex_user_data.default_email
         )
         service_output = YandexIdLoginServiceOutput(user_email=yandex_user_data.default_email)
-        return YandexLoginServiceResult.RECONCILE, service_output, None
+        return OAuthLoginServiceResult.RECONCILE, service_output, None
     except sa_exc.DatabaseError as e:
         logger.error(f"Database error during processing YandexId data: {str(e)}")
-        return YandexLoginServiceResult.ERROR, None, None
+        return OAuthLoginServiceResult.ERROR, None, None
 
     match user_acquired_by:
         case UserAcquireMethod.GET:
@@ -69,7 +69,7 @@ async def login(
         await oauth_account_routine()
     except sa_exc.DatabaseError as e:
         logger.error(f"Database error during processing YandexId data: {str(e)}")
-        return YandexLoginServiceResult.ERROR, None, None
+        return OAuthLoginServiceResult.ERROR, None, None
 
     try:
         roles_claim = user.role.title
@@ -84,4 +84,4 @@ async def login(
         subject=str(user.id), user_claims=claims
     )
     tokens = TokenInfo(access=access_token, refresh=refresh_token)
-    return YandexLoginServiceResult.SUCCESS, YandexIdLoginServiceOutput(tokens=tokens), "ok"
+    return OAuthLoginServiceResult.SUCCESS, YandexIdLoginServiceOutput(tokens=tokens), "ok"
