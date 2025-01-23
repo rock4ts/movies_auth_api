@@ -176,7 +176,7 @@ async def get_cached_yandex_login_data(
     state: UUID4,
     redis: Redis = Depends(get_redis_connection)
 ) -> YandexIdLoginRequestParams:
-    login_params_json = await redis.get(f"{YandexAuthRedisPrefix.YALOGIN}:{state}")
+    login_params_json = await redis.getdel(f"{YandexAuthRedisPrefix.YALOGIN}:{state}")
     if login_params_json is None:
         raise Http400(f"Failed to find login data for state '{state}'")
     
@@ -197,7 +197,7 @@ async def get_yandexid_token_request_data(
         token_request_data = YandexIdTokenRequestData(code=code, **login_data_dict)
     except ValidationError:
         raise Http500
-    
+
     return token_request_data
 
 
