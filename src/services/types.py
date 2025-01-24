@@ -7,10 +7,11 @@ from redis import Redis
 from db.repository import AsyncBaseRepository
 from services.oauth.enums import OAuthLoginServiceResult
 from services.oauth.schemas import OAuthLoginServiceOutput
-from services.schemas import HttpRequestComponents
+from services.schemas import HttpRequestComponents, RequestMeta
 
 OAuthLoginService = Callable[
     [
+        RequestMeta,
         AsyncBaseRepository,
         Redis,
         AuthJWT,

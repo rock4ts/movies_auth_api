@@ -17,7 +17,7 @@ from db.postgres import PostgresHelper, get_pg_helper
 from db.redis import get_redis_connection
 from db.repository import AsyncBaseRepository, AsyncSqlAlchemyRepository
 from services.oauth.schemas import OAuthTokenRequestData, OAuthUserRequestParams, OAuthLoginRequestParams
-from services.schemas import HttpRequestComponents
+from services.schemas import HttpRequestComponents, RequestMeta
 
 from schemas.enums import SystemRoles
 from services.oauth.enums import OAuthOperation, OAuthProviders
@@ -25,6 +25,25 @@ from services.types import OAuthLoginService
 from services.oauth.yandex.service import login as login_with_yandex
 from services.role import RoleService
 from .exceptions import Http400, Http500
+
+
+def get_user_agent(request: Request) -> str:
+    user_agent = request.headers.get("User-Agent", "unknown")
+    return str(user_agents.parse(user_agent))
+
+
+def get_host(request: Request) -> str:
+    return request.client.host
+
+
+def get_request_meta(
+    user_agent: str = Depends(get_user_agent),
+    host: str = Depends(get_host),
+) -> RequestMeta:
+    return RequestMeta(
+        host=host,
+        user_agent=user_agent
+    )
 
 
 def get_app_settings() -> Settings:

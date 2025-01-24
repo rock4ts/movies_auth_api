@@ -141,3 +141,16 @@ async def create_oauth_account(
     )
     db_oauth_account = await repository.add(new_oauth_account)
     return db_oauth_account
+
+
+@backoff.on_exception(backoff.expo, sa_exc.DatabaseError, max_time=5)
+async def create_login_checkpoint(
+    repository: AsyncBaseRepository,
+    user_id: UUID4,
+    ip_address: str,
+    user_agent: str
+) -> None:
+    login_history = models.LoginHistory(
+        user_id=user_id, ip_address=ip_address, user_agent=user_agent
+    )
+    await repository.add(login_history)

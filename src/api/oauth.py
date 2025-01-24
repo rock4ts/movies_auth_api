@@ -14,7 +14,7 @@ from db.redis import get_redis_connection
 from db.repository import AsyncBaseRepository
 from schemas.token import TokenInfo
 from services.oauth.enums import OAuthLoginServiceResult
-from services.schemas import HttpRequestComponents
+from services.schemas import HttpRequestComponents, RequestMeta
 from services.types import OAuthLoginService
 
 from .dependencies import (
@@ -24,6 +24,7 @@ from .dependencies import (
     get_oauth_login_service,
     get_oauth_token_request_components,
     get_oauth_user_request_components,
+    get_request_meta,
     get_sqlalchemy_repository,
 )
 
@@ -41,6 +42,7 @@ async def oauth_login(
 @router.post("/{provider}/login")
 async def confirm_login_yandex(
     provider: str,
+    request_meta: RequestMeta = Depends(get_request_meta),
     repository: AsyncBaseRepository = Depends(get_sqlalchemy_repository),
     redis: Redis = Depends(get_redis_connection),
     authorize: AuthJWT = Depends(auth_bearer),
@@ -50,6 +52,7 @@ async def confirm_login_yandex(
     oauth_login_service: OAuthLoginService = Depends(get_oauth_login_service)
 ) -> TokenInfo:
     result, service_output, res_msg = await oauth_login_service(
+        request_meta,
         repository,
         redis,
         authorize,

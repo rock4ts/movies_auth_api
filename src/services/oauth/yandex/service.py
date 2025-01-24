@@ -10,11 +10,13 @@ from db.repository import AsyncBaseRepository
 from schemas.token import TokenInfo
 from services.oauth.enums import OAuthLoginServiceResult, UserAcquireMethod
 from services.oauth.schemas import OAuthLoginServiceOutput
-from services.schemas import HttpRequestComponents
+from services.schemas import HttpRequestComponents, RequestMeta
+
 from ._exceptions import YandexIdRequestError
 from ._utils import (
     authorize_with_yandex,
     cache_login_data_for_reconcile,
+    create_login_checkpoint,
     create_oauth_account,
     get_or_create_yandex_user,
     update_oauth_account,
@@ -24,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 async def login(
+    request_meta: RequestMeta,
     repository: AsyncBaseRepository,
     redis: Redis,
     authorize: AuthJWT,
@@ -69,6 +72,15 @@ async def login(
         logger.error(f"Database error during processing YandexId data: {str(e)}")
         return OAuthLoginServiceResult.ERROR, None, None
 
+    try:
+        await create_login_checkpoint(
+            repository, user.id, request_meta.host, request_meta.user_agent
+        )
+    except sa_exc.DatabaseError as e:
+        logger.error(
+            f"Database error during login checkpoint creation for user {user.id}, "
+            f"ip {request_meta.host}, user-agent {request_meta.user_agent}: {str(e)}"
+        )
     try:
         roles_claim = user.role.title
     except AttributeError:

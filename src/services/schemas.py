@@ -8,3 +8,8 @@ class HttpRequestComponents(BaseModel):
     params: Mapping | None = None
     data: Mapping | None = None
     headers: dict | None = None
+
+
+class RequestMeta(BaseModel):
+    host: str
+    user_agent: str
