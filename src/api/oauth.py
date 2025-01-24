@@ -71,6 +71,6 @@ async def confirm_login_yandex(
 # Получаем юзера по email и предлагаем подтвердить кодом на почту
 # или пропустить подтверждение и создать аккаунт без привязки к почте (# TODO требует доработки)
 # Далее создаём oauth аккаунт используя закэшированные данные
-@router.get("/yandex/reconcile")
-async def reconcile_yandex_user(user_email: EmailStr) -> None:
+@router.get("/{provider}/reconcile")
+async def reconcile_yandex_user(provider: str, user_email: EmailStr) -> None:
     pass
