@@ -5,8 +5,8 @@ from pydantic import UUID4
 
 import models
 from db.repository import AsyncBaseRepository
-from schemas.enums import ServiceWorkResults
 from schemas.role import CreateRoleDTO, UpdateRoleDTO
+from services.enums import ServiceWorkResults
 
 logger = logging.getLogger(__name__)
 

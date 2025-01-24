@@ -7,8 +7,8 @@ from pydantic import UUID4
 import models
 from api.exceptions import Http400, Http500
 from db.repository import AsyncBaseRepository
-from schemas.enums import ServiceWorkResults
 from schemas.role import CreateRoleDTO, ReadRoleDTO, ReadRoleDTO, UpdateRoleDTO
+from services.enums import ServiceWorkResults
 from services.role import RoleService
 from .dependencies import (
     check_invalid_token,

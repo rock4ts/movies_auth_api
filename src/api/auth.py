@@ -9,9 +9,9 @@ from api.exceptions import Http400, Http500
 from db.redis import get_redis_connection
 from db.repository import AsyncBaseRepository
 from models.history import LoginHistory
-from schemas.enums import ServiceWorkResults
 from schemas.token import TokenInfo
 from schemas.user import UserBaseOut, UserIn, UserLogin
+from services.enums import ServiceWorkResults
 from services.token import authorize_by_user_id, invalidate_token, check_invalid_token
 from services.users import create_user as services_create_user, get_user_by_email
 from services.users import validate_auth_user_login

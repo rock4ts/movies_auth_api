@@ -10,8 +10,8 @@ from sqlalchemy.orm import joinedload
 
 import models
 from db.repository import AsyncSqlAlchemyRepository
-from schemas.enums import ServiceWorkResults
 from schemas.token import TokenInfo
+from services.enums import ServiceWorkResults
 
 logger = logging.getLogger(__name__)
 
