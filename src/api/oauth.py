@@ -28,14 +28,14 @@ router = APIRouter()
 auth_bearer = AuthJWTBearer()
 
 
-@router.get("/{provider}/login", dependencies=[Depends(cache_oauth_login_params),])
+@router.get("/{provider}", dependencies=[Depends(cache_oauth_login_params),])
 async def oauth_login(
     redirect = Depends(get_oauth_login_redirect),  # noqa: ANN001 as per https://github.com/fastapi/fastapi/discussions/9897
 ) -> RedirectResponse:
     return redirect
 
 
-@router.post("/{provider}/token")
+@router.post("/{provider}/login")
 async def confirm_login_yandex(
     provider: str,
     repository: AsyncBaseRepository = Depends(get_sqlalchemy_repository),
