@@ -7,12 +7,10 @@ from redis.asyncio import Redis
 
 import models
 from db.repository import AsyncBaseRepository
-from schemas.enums import OAuthProviders
-from services.oauth.enums import UserAcquireMethod
+from services.oauth.enums import OAuthOperation, OAuthProviders, UserAcquireMethod
 from services.schemas import HttpRequestComponents
 
 from ._exceptions import YandexIdRequestError
-from .enums import YandexAuthRedisPrefix
 from .schemas import (
     ReconcileYandexIdUserData,
     YandexIdTokenData,
@@ -81,9 +79,11 @@ async def authorize_with_yandex(
 async def cache_login_data_for_reconcile(
     redis: Redis, yandex_token_data: YandexIdTokenData, user_email: EmailStr
 ) -> None:
-    reconcile_data = ReconcileYandexIdUserData(default_email=user_email, **yandex_token_data.model_dump())
+    reconcile_data = ReconcileYandexIdUserData(
+        default_email=user_email, **yandex_token_data.model_dump()
+    )
     await redis.setex(
-        f"{YandexAuthRedisPrefix.YATOKEN}:{user_email}",
+        f"{OAuthProviders.YANDEX}:{OAuthOperation.RECONCILE}:{user_email}",
         600,
         reconcile_data.model_dump_json(exclude_none=True)
     )

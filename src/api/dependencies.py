@@ -19,10 +19,10 @@ from db.repository import AsyncBaseRepository, AsyncSqlAlchemyRepository
 from services.oauth.schemas import OAuthTokenRequestData, OAuthUserRequestParams, OAuthLoginRequestParams
 from services.schemas import HttpRequestComponents
 
-from schemas.enums import OAuthProviders, SystemRoles
+from schemas.enums import SystemRoles
+from services.oauth.enums import OAuthOperation, OAuthProviders
 from services.types import OAuthLoginService
-from services.oauth.yandex import service as ya_service
-from services.oauth.yandex.enums import YandexAuthRedisPrefix
+from services.oauth.yandex.service import login as login_with_yandex
 from services.role import RoleService
 from .exceptions import Http400, Http500
 
@@ -106,7 +106,7 @@ def get_oauth_login_cache_key(
     oauth_login_params: BaseModel = Depends(get_oauth_login_params)
 ) -> str:
     if provider == OAuthProviders.YANDEX:
-        return f"{YandexAuthRedisPrefix.YALOGIN}:{oauth_login_params.state}"
+        return f"{provider}:{OAuthOperation.INIT}:{oauth_login_params.state}"
 
 
 def get_oauth_login_url(
@@ -173,7 +173,7 @@ async def cache_oauth_login_params(
 
 async def get_oauth_login_service(provider: OAuthProviders) -> OAuthLoginService:
     if provider == OAuthProviders.YANDEX:
-        return ya_service.login
+        return login_with_yandex
 
 
 
@@ -185,9 +185,8 @@ async def get_cached_oauth_login_data(
     redis: Redis = Depends(get_redis_connection)
 ) -> OAuthLoginRequestParams:
     if provider == OAuthProviders.YANDEX:
-        cache_key_prefix = YandexAuthRedisPrefix.YALOGIN
+        cache_key_prefix = f"{provider}:{OAuthOperation.INIT}"
 
-    print(cache_key_prefix)
     login_params_json = await redis.getdel(f"{cache_key_prefix}:{state}")
     
     if login_params_json is None:

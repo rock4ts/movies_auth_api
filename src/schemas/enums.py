@@ -11,6 +11,3 @@ class ServiceWorkResults(IntEnum):
     FAIL = 0
     ERROR = -1
 
-
-class OAuthProviders(StrEnum):
-    YANDEX = auto()
