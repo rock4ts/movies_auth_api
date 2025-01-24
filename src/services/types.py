@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Awaitable, Callable
 
 import httpx
 from async_fastapi_jwt_auth import AuthJWT
@@ -18,5 +18,5 @@ OAuthLoginService = Callable[
         HttpRequestComponents,
         HttpRequestComponents
     ],
-    tuple[OAuthLoginServiceResult, OAuthLoginServiceOutput | None, str | None]
+    Awaitable[tuple[OAuthLoginServiceResult, OAuthLoginServiceOutput | None, str | None]]
 ]
