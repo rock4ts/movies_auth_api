@@ -16,13 +16,12 @@ from core.config import Settings, settings
 from db.postgres import PostgresHelper, get_pg_helper
 from db.redis import get_redis_connection
 from db.repository import AsyncBaseRepository, AsyncSqlAlchemyRepository
-from services.oauth.yandex.schemas import (
-    HttpRequestComponents,
-    YandexIdLoginRequestParams,
-    YandexIdTokenRequestData,
-    YandexIdUserRequestParams
-)
+from services.oauth.schemas import OAuthTokenRequestData, OAuthUserRequestParams, OAuthLoginRequestParams
+from services.schemas import HttpRequestComponents
+
 from schemas.enums import OAuthProviders, SystemRoles
+from services.types import OAuthLoginService
+from services.oauth.yandex import service as ya_service
 from services.oauth.yandex.enums import YandexAuthRedisPrefix
 from services.role import RoleService
 from .exceptions import Http400, Http500
@@ -91,7 +90,7 @@ async def check_superuser(
 
 
 def get_oauth_login_params(
-    provider: str,
+    provider: OAuthProviders,
     request: Request,
     app_settings: Settings = Depends(get_app_settings)
 ) -> BaseModel:
@@ -103,7 +102,7 @@ def get_oauth_login_params(
 
 
 def get_oauth_login_cache_key(
-    provider: str,
+    provider: OAuthProviders,
     oauth_login_params: BaseModel = Depends(get_oauth_login_params)
 ) -> str:
     if provider == OAuthProviders.YANDEX:
@@ -111,7 +110,7 @@ def get_oauth_login_cache_key(
 
 
 def get_oauth_login_url(
-    provider: str,
+    provider: OAuthProviders,
     login_params: BaseModel | None = Depends(get_oauth_login_params),
     settings: Settings = Depends(get_app_settings)
 ) -> str:
@@ -132,10 +131,11 @@ def get_oauth_login_url(
     return result_url 
 
 
+
 def get_yandexid_login_params(
     client_id: str,
     user_agent: str | None = None
-) -> YandexIdLoginRequestParams:
+) -> OAuthLoginRequestParams:
     params_dict = {"client_id": client_id}
 
     if user_agent:
@@ -143,11 +143,11 @@ def get_yandexid_login_params(
             {"device_name": str(user_agents.parse(user_agent)), "device_id": uuid4()}
         )
     
-    return YandexIdLoginRequestParams(**params_dict)
+    return OAuthLoginRequestParams(**params_dict)
 
 
 def get_oauth_login_redirect(
-    provider: str,
+    provider: OAuthProviders,
     redirect_url: str = Depends(get_oauth_login_url),
     settings: Settings = Depends(get_app_settings),
 ) -> RedirectResponse:
@@ -171,52 +171,69 @@ async def cache_oauth_login_params(
         raise Http500
 
 
+async def get_oauth_login_service(provider: OAuthProviders) -> OAuthLoginService:
+    if provider == OAuthProviders.YANDEX:
+        return ya_service.login
+
+
+
+
 @backoff.on_exception(backoff.expo, ConnectionError, max_time=15)
-async def get_cached_yandex_login_data(
+async def get_cached_oauth_login_data(
+    provider: OAuthProviders,
     state: UUID4,
     redis: Redis = Depends(get_redis_connection)
-) -> YandexIdLoginRequestParams:
-    login_params_json = await redis.getdel(f"{YandexAuthRedisPrefix.YALOGIN}:{state}")
+) -> OAuthLoginRequestParams:
+    if provider == OAuthProviders.YANDEX:
+        cache_key_prefix = YandexAuthRedisPrefix.YALOGIN
+
+    print(cache_key_prefix)
+    login_params_json = await redis.getdel(f"{cache_key_prefix}:{state}")
+    
     if login_params_json is None:
         raise Http400(f"Failed to find login data for state '{state}'")
-    
+
     try:
-        login_params = YandexIdLoginRequestParams.model_validate_json(login_params_json)
+        login_params = OAuthLoginRequestParams.model_validate_json(login_params_json)
     except ValidationError:
         raise Http500
 
     return login_params
 
 
-async def get_yandexid_token_request_data(
+async def get_oauth_token_request_data(
     code: str,
-    cached_login_data: YandexIdLoginRequestParams = Depends(get_cached_yandex_login_data)
-) -> YandexIdTokenRequestData:
+    cached_login_data: OAuthLoginRequestParams = Depends(get_cached_oauth_login_data)
+) -> OAuthTokenRequestData:
     login_data_dict = cached_login_data.model_dump(exclude_none=True)
     try:
-        token_request_data = YandexIdTokenRequestData(code=code, **login_data_dict)
+        token_request_data = OAuthTokenRequestData(code=code, **login_data_dict)
     except ValidationError:
         raise Http500
 
     return token_request_data
 
 
-async def get_yandexid_token_request_components(
+async def get_oauth_token_request_components(
+    provider: OAuthProviders,
     app_settings: Settings = Depends(get_app_settings),
-    request_data: YandexIdTokenRequestData = Depends(get_yandexid_token_request_data),
+    request_data: OAuthTokenRequestData = Depends(get_oauth_token_request_data),
 ) -> HttpRequestComponents:
-    return HttpRequestComponents(
-        url=app_settings.oauth_yandex.token_url,
-        data=request_data.model_dump(exclude_none=True),
-        headers={"Authorization": app_settings.oauth_yandex.auth_header}
-    )
+    if provider == OAuthProviders.YANDEX:
+        return HttpRequestComponents(
+            url=app_settings.oauth_yandex.token_url,
+            data=request_data.model_dump(exclude_none=True),
+            headers={"Authorization": app_settings.oauth_yandex.auth_header}
+        )
 
 
-async def get_yandexid_user_request_components(
+async def get_oauth_user_request_components(
+    provider: OAuthProviders,
     app_settings: Settings = Depends(get_app_settings),
-    request_params: YandexIdUserRequestParams = Depends()
+    request_params: OAuthUserRequestParams = Depends()
 ) -> HttpRequestComponents:
-    return HttpRequestComponents(
-        url=app_settings.oauth_yandex.user_info_url,
-        params=request_params.model_dump(exclude_none=True)
-    )
+    if provider == OAuthProviders.YANDEX:
+        return HttpRequestComponents(
+            url=app_settings.oauth_yandex.user_info_url,
+            params=request_params.yandex.model_dump(exclude_none=True)
+        )

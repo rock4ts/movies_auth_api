@@ -1,3 +1,5 @@
+from typing import Callable
+
 import httpx
 from async_fastapi_jwt_auth import AuthJWT
 from async_fastapi_jwt_auth.auth_jwt import AuthJWTBearer
@@ -12,16 +14,17 @@ from db.redis import get_redis_connection
 from db.repository import AsyncBaseRepository
 from schemas.token import TokenInfo
 from services.oauth.enums import OAuthLoginServiceResult
-from services.oauth.yandex import service as ya_service
-from services.oauth.yandex.schemas import HttpRequestComponents
+from services.schemas import HttpRequestComponents
+from services.types import OAuthLoginService
 
 from .dependencies import (
     cache_oauth_login_params,
     get_http_client,
     get_oauth_login_redirect,
+    get_oauth_login_service,
+    get_oauth_token_request_components,
+    get_oauth_user_request_components,
     get_sqlalchemy_repository,
-    get_yandexid_token_request_components,
-    get_yandexid_user_request_components,
 )
 
 router = APIRouter()
@@ -42,10 +45,11 @@ async def confirm_login_yandex(
     redis: Redis = Depends(get_redis_connection),
     authorize: AuthJWT = Depends(auth_bearer),
     http_client: httpx.AsyncClient = Depends(get_http_client),
-    token_request_components: HttpRequestComponents = Depends(get_yandexid_token_request_components),
-    user_request_components: HttpRequestComponents = Depends(get_yandexid_user_request_components),
+    token_request_components: HttpRequestComponents = Depends(get_oauth_token_request_components),
+    user_request_components: HttpRequestComponents = Depends(get_oauth_user_request_components),
+    oauth_login_service: OAuthLoginService = Depends(get_oauth_login_service)
 ) -> TokenInfo:
-    result, service_output, res_msg = await ya_service.login(
+    result, service_output, res_msg = await oauth_login_service(
         repository,
         redis,
         authorize,

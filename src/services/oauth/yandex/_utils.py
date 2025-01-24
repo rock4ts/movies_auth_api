@@ -6,13 +6,18 @@ from redis import exceptions as redis_exc
 from redis.asyncio import Redis
 
 import models
-from core.config import settings
 from db.repository import AsyncBaseRepository
 from schemas.enums import OAuthProviders
+from services.oauth.enums import UserAcquireMethod
+from services.schemas import HttpRequestComponents
 
 from ._exceptions import YandexIdRequestError
-from .enums import UserAcquireMethod, YandexAuthRedisPrefix
-from .schemas import HttpRequestComponents, ReconcileYandexIdUserData, YandexIdTokenData, YandexIdUserData
+from .enums import YandexAuthRedisPrefix
+from .schemas import (
+    ReconcileYandexIdUserData,
+    YandexIdTokenData,
+    YandexIdUserData,
+)
 
 
 @backoff.on_exception(backoff.expo, httpx.RequestError, max_time=5)

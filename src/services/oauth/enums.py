@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import IntEnum, StrEnum, auto
 
 
 class OAuthLoginServiceResult(IntEnum):
@@ -6,3 +6,8 @@ class OAuthLoginServiceResult(IntEnum):
     FAIL = 0
     ERROR = -1
     RECONCILE = 2
+
+
+class UserAcquireMethod(StrEnum):
+    GET = auto()
+    CREATE = auto()

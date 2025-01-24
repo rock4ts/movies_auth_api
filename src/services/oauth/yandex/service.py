@@ -1,16 +1,16 @@
 import logging
 from functools import partial
-from typing import Union
 
 import httpx
 import sqlalchemy.exc as sa_exc
 from async_fastapi_jwt_auth import AuthJWT
-from pydantic import EmailStr
 from redis.asyncio import Redis
 
 from db.repository import AsyncBaseRepository
 from schemas.token import TokenInfo
-
+from services.oauth.enums import OAuthLoginServiceResult, UserAcquireMethod
+from services.oauth.schemas import OAuthLoginServiceOutput
+from services.schemas import HttpRequestComponents
 from ._exceptions import YandexIdRequestError
 from ._utils import (
     authorize_with_yandex,
@@ -19,8 +19,6 @@ from ._utils import (
     get_or_create_yandex_user,
     update_oauth_account,
 )
-from .enums import UserAcquireMethod, OAuthLoginServiceResult
-from .schemas import HttpRequestComponents, YandexIdLoginServiceOutput
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +30,7 @@ async def login(
     http_client: httpx.AsyncClient,
     token_request_components: HttpRequestComponents,
     user_request_components: HttpRequestComponents
-) -> tuple[OAuthLoginServiceResult, YandexIdLoginServiceOutput | None, str | None]:
+) -> tuple[OAuthLoginServiceResult, OAuthLoginServiceOutput | None, str | None]:
 
     try:
         yandex_token_data, yandex_user_data = await authorize_with_yandex(
@@ -50,7 +48,7 @@ async def login(
         await cache_login_data_for_reconcile(
             redis, yandex_token_data, yandex_user_data.default_email
         )
-        service_output = YandexIdLoginServiceOutput(user_email=yandex_user_data.default_email)
+        service_output = OAuthLoginServiceOutput(user_email=yandex_user_data.default_email)
         return OAuthLoginServiceResult.RECONCILE, service_output, None
     except sa_exc.DatabaseError as e:
         logger.error(f"Database error during processing YandexId data: {str(e)}")
@@ -84,4 +82,4 @@ async def login(
         subject=str(user.id), user_claims=claims
     )
     tokens = TokenInfo(access=access_token, refresh=refresh_token)
-    return OAuthLoginServiceResult.SUCCESS, YandexIdLoginServiceOutput(tokens=tokens), "ok"
+    return OAuthLoginServiceResult.SUCCESS, OAuthLoginServiceOutput(tokens=tokens), "ok"
