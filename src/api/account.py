@@ -137,7 +137,7 @@ async def get_login_history(
         query = (
             select(LoginHistory)
             .where(LoginHistory.user_id == user_id)
-            .order_by(LoginHistory.timestamp.desc())
+            .order_by(LoginHistory.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -145,7 +145,7 @@ async def get_login_history(
         login_history = result.scalars().all()
 
         history_data = [{
-            "date_time": lh.timestamp.strftime('%a %d %b %Y, %I:%M%p'),
+            "date_time": lh.created_at.strftime('%a %d %b %Y, %I:%M%p'),
             "ip_address": lh.ip_address,
             "user-agent": lh.user_agent
         } for lh in login_history]
