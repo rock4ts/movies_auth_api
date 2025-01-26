@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Table,
     delete,
+    select,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -90,6 +91,23 @@ async def clear_cache(redis_client: Redis):
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
+def get_cache_by_prefix(redis_client: Redis):
+
+    async def inner(prefix):
+        result = []
+        pattern = f"{prefix}:*"
+
+        async for key in redis_client.scan_iter(pattern):
+            val = await redis_client.get(key)
+            if val:
+                result.append(val)
+
+        return result
+
+    return inner
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 def clear_cache_by_prefix(redis_client: Redis):
 
     async def inner(prefix):
@@ -160,6 +178,18 @@ def create_user(db_session_factory, users_table):
             await session.execute(insert(users_table).values(user))
             await session.commit()
         return user
+
+    return inner
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+def get_user_by_email(db_session_factory, users_table):
+
+    async def inner(email: str):
+        async with db_session_factory() as session:
+            stmt = select(users_table).where(users_table.c.email == email)
+            result = await session.execute(stmt)
+            return result.scalars().first()
 
     return inner
 

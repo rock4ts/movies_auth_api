@@ -36,6 +36,11 @@ class WebAppSettings(BaseSettings):
     authjwt_secret_key: str = "secret"
     authjwt_algorithm: str = "HS256"
 
+    oauth_yandex_email: str = "rock4ts@yandex.ru"
+    oauth_yandex_mock_token_endpoint: str = "/mock/yandex-token"
+    oauth_yandex_mock_user_endpoint: str = "/mock/yandex-user"
+    oauth_yandex_mock_code: str = "123qwerty"
+
     @property
     def service_url(self) -> HttpUrl:
         return f"http://{self.service_host}:{self.service_port}/auth"
