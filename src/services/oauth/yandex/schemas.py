@@ -24,7 +24,7 @@ class YandexIdUserData(BaseModel):
     client_id: str
     psuid: str  # Идентификатор авторизованного пользователя в Яндексе. Формируется на стороне Яндекса на основе пары client_id и user_id
     default_email: EmailStr
-    default_phone: YandexIdUserPhoneNumber | None
+    default_phone: YandexIdUserPhoneNumber | None = None
     first_name: str
     last_name: str
     display_name: str

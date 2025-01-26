@@ -20,6 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.account import router as account_router
 from api.auth import router as auth_router
+from api.mock import router as mock_router
 from api.oauth import router as oauth_router
 from api.role import router as role_router
 from core.config import settings
@@ -120,6 +121,7 @@ app = FastAPI(
 )
 app.include_router(auth_router)
 app.include_router(account_router)
+app.include_router(mock_router, prefix='/mock')
 app.include_router(oauth_router)
 app.include_router(role_router, prefix='/role')
 app.add_exception_handler(AuthJWTException, handle_authjwt_exception)
