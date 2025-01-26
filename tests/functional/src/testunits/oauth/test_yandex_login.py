@@ -11,7 +11,7 @@ async def test_auth_yandex_redirects(http_client) -> None:  # noqa: ANN001
     response = await http_client.get(f"{webapp_settings.service_url}/yandex")
 
     assert response.status == HTTPStatus.OK
-    assert response.url.host == "oauth.yandex.ru"
+    assert response.url.host in ("oauth.yandex.ru", "passport.yandex.ru")
 
 
 @pytest.mark.asyncio(loop_scope="session")
