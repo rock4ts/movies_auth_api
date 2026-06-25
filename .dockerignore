@@ -1,7 +1,10 @@
 # Common
-README.md
-Makefile
-docker-compose*
+.env*
+/tests
+docker-compose.tests.yaml
 Dockerfile
-.env
-.env.example
+README.md
+uv.lock
+pyproject.toml
+docker
+/certs

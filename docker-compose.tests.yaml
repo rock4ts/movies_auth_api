@@ -1,0 +1,63 @@
+services:
+
+  postgres:
+    build: ./tests/docker/postgres
+    ports:
+      - "5434:5432"
+    env_file:
+      - .env.tests
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./tests/docker/postgres/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
+    networks:
+      - auth-api-tests
+
+  redis:
+    image: redis:alpine
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6377:6379"
+    networks:
+      - auth-api-tests
+
+  yandex-mock:
+    build: ./tests/docker/yandex-mock
+    ports:
+      - "8090:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/admin/stats')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-api-tests
+
+  auth-api:
+    build: .
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env.tests
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      yandex-mock:
+        condition: service_healthy
+    networks:
+      - auth-api-tests
+    volumes:
+      - ./certs:/run/secrets/jwt:ro
+
+networks:
+  auth-api-tests:
+    name: auth-api-tests
