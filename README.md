@@ -103,7 +103,7 @@ On container start, the entrypoint runs Alembic migrations and creates the defau
 | Variable | Description |
 |----------|-------------|
 | `PROD_RUN` | Sets the `Secure` flag on auth cookies — use `true` only when HTTPS is configured |
-| `RESET_DB_ON_STARTUP` | Drop and recreate the schema on app startup when `true` (local dev / tests) |
+| `RESET_DB_ON_STARTUP` | Drop and recreate the schema on app startup when `true` — **local dev only** (`.env.local`); keep `false` for containers, CI, and tests |
 | `SUPERUSER_EMAIL` / `SUPERUSER_PASSWORD` | Bootstrap superuser credentials |
 | `PRIVATE_KEY_PATH` / `PUBLIC_KEY_PATH` | RS256 PEM files for signing and verification |
 | `YANDEXID_CLIENT_ID` / `YANDEXID_CLIENT_SECRET` | Yandex OAuth application credentials |
@@ -126,7 +126,7 @@ From app root:
    set -a && source .env.local && set +a; uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
 
-With `RESET_DB_ON_STARTUP=true` (the default in `.env.local`), the service drops and recreates tables on startup and seeds the superuser and default role — no manual migrations needed.
+Set `RESET_DB_ON_STARTUP=true` only in `.env.local` for bare-metal local runs: the service drops and recreates tables on startup and seeds the superuser and default role — no manual migrations needed. Do not enable this flag outside local development.
 
 From repo root:
 
@@ -144,7 +144,7 @@ Containerized runs are orchestrated from repo root:
 
 The `auth-api` service depends on `postgres-auth`, Redis, and Jaeger. JWT keys are mounted from `./auth-certs/` at `/run/secrets/jwt/`.
 
-Ensure env files are in place (`env-files/.env.auth` is used by the dev stack). The repo development stack serves HTTP only on port 80, so keep `PROD_RUN=false` there. Use `RESET_DB_ON_STARTUP=false` for container runs that should apply Alembic migrations instead of resetting the schema:
+Ensure env files are in place (`env-files/.env.auth` is used by the dev stack). The repo development stack serves HTTP only on port 80, so keep `PROD_RUN=false` there. Keep `RESET_DB_ON_STARTUP=false` so the entrypoint applies Alembic migrations instead of resetting the schema:
 
 Run development stack:
 
@@ -172,7 +172,7 @@ Functional tests exercise the live API against PostgreSQL, Redis, and a Yandex O
 
 ### Test stack (Docker)
 
-1. Place the JWT key pair at `certs/jwt-private.pem` and `certs/jwt-public.pem` (used by the API container and the test suite). The test stack uses `.env.tests` with `PROD_RUN=false` and `RESET_DB_ON_STARTUP=true`.
+1. Place the JWT key pair at `certs/jwt-private.pem` and `certs/jwt-public.pem` (used by the API container and the test suite). The test stack uses `.env.tests` with `PROD_RUN=false` and `RESET_DB_ON_STARTUP=false` (Alembic migrations on startup, same as other container runs).
 
 2. Start PostgreSQL, Redis, the Yandex mock, and the API:
    ```bash
