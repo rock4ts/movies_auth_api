@@ -9,7 +9,7 @@ LOG_LEVEL = "DEBUG" if settings.debug else "INFO"
 
 
 def log_handled_exception(logger: logging.Logger, message: str, exc: BaseException) -> None:
-    logger.info("%s: exception=%s", message, type(exc).__name__)
+    logger.info("%s: exception=%s", message, type(exc).__name__, exc_info=settings.debug)
 
 
 class TraceContextFilter(logging.Filter):
