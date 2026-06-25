@@ -56,7 +56,7 @@ services:
     networks:
       - auth-api-tests
     volumes:
-      - ./certs:/run/secrets/jwt:ro
+      - ./tests/docker/certs:/run/secrets/jwt:ro
 
 networks:
   auth-api-tests:
