@@ -32,7 +32,7 @@ Superusers may have `role: null` and an empty `access_labels` list; consumers tr
 
 ## REST API
 
-The app sets `root_path="/auth/api"`. Through nginx in the development stack, all paths below are served under `/auth/api/`.
+The app sets `root_path="/auth/api"`. When deployed behind a reverse proxy with that path prefix, the routes below are served under `/auth/api/`.
 
 ### Auth
 
@@ -86,7 +86,7 @@ Role ──< User ──< LoginHistory
 - **LoginHistory** — append-only audit of sign-ins, partitioned by `logged_in_at`
 - **OAuthAccount** — links a Yandex account to a local user
 
-On container start, the entrypoint runs Alembic migrations and creates the default `user` role (with the `free` label) plus the configured superuser account if they do not exist yet.
+On startup, the service expects the schema to already match the current Alembic revision. See [Database migrations](#database-migrations).
 
 ## Tech stack
 
@@ -103,7 +103,7 @@ On container start, the entrypoint runs Alembic migrations and creates the defau
 | Variable | Description |
 |----------|-------------|
 | `PROD_RUN` | Sets the `Secure` flag on auth cookies — use `true` only when HTTPS is configured |
-| `RESET_DB_ON_STARTUP` | Drop and recreate the schema on app startup when `true` — **local dev only** (`.env.local`); keep `false` for containers, CI, and tests |
+| `RESET_DB_ON_STARTUP` | Drop and recreate the schema on app startup when `true` — useful for quick iteration; keep `false` when using Alembic migrations |
 | `SUPERUSER_EMAIL` / `SUPERUSER_PASSWORD` | Bootstrap superuser credentials |
 | `PRIVATE_KEY_PATH` / `PUBLIC_KEY_PATH` | RS256 PEM files for signing and verification |
 | `YANDEXID_CLIENT_ID` / `YANDEXID_CLIENT_SECRET` | Yandex OAuth application credentials |
@@ -111,53 +111,71 @@ On container start, the entrypoint runs Alembic migrations and creates the defau
 | `RATE_LIMIT_ENABLED` | Enable per-IP rate limiting (`true` by default) |
 | `TRACING_ENABLED` | Export traces to Jaeger when `true` |
 
-Database, Redis, Yandex endpoints, and tracing settings — see `.env.example` for container defaults and `.env.local` for local run defaults.
+Database, Redis, Yandex endpoints, and tracing settings — see `.env.example`. Copy it to `.env` and adjust values for your environment.
 
-## Local development
+## Getting started
 
-From app root:
 1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/).
-2. Start PostgreSQL and Redis. From repo root, `just dev` brings up `postgres-auth` (port `5433`) and Redis (port `6379`); match hosts/ports in `.env.local`.
-3. Generate or copy an RS256 key pair into `certs/jwt-private.pem` and `certs/jwt-public.pem` (the `certs/` directory is gitignored). Other platform services use the public key from repo-root `auth-certs/jwt-public.pem` — keep both in sync during local development.
-4. Configure Yandex OAuth credentials in `.env.local` when testing the real provider.
-5. Sync dependencies and start the dev server:
+2. Copy `.env.example` to `.env` and adjust hosts, ports, and credentials.
+3. Generate or copy an RS256 key pair and set `PRIVATE_KEY_PATH` and `PUBLIC_KEY_PATH` in `.env` (for example, `certs/jwt-private.pem` and `certs/jwt-public.pem`).
+4. Start PostgreSQL and Redis; match their hosts and ports in `.env`.
+5. Configure Yandex OAuth credentials when testing the real provider.
+6. Sync dependencies:
    ```bash
    uv sync
-   set -a && source .env.local && set +a; uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
+7. Prepare the database — see [Database migrations](#database-migrations) (Alembic or `RESET_DB_ON_STARTUP`).
 
-Set `RESET_DB_ON_STARTUP=true` only in `.env.local` for bare-metal local runs: the service drops and recreates tables on startup and seeds the superuser and default role — no manual migrations needed. Do not enable this flag outside local development.
-
-From repo root:
+Run the service:
 
 ```bash
-just auth-api-local
+set -a && source .env && set +a; uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 OpenAPI docs: http://127.0.0.1:8000/docs
 
-## Containerized run
+## Database migrations
 
-Containerized runs are orchestrated from repo root:
+Schema changes live in `alembic/versions/`. Alembic reads the database URL from `POSTGRES_*` variables in `.env`.
 
-- Development stack: `docker-compose.dev.yml`
+### When to use Alembic vs `RESET_DB_ON_STARTUP`
 
-The `auth-api` service depends on `postgres-auth`, Redis, and Jaeger. JWT keys are mounted from `./auth-certs/` at `/run/secrets/jwt/`.
+| Approach | When | What happens |
+|----------|------|--------------|
+| `RESET_DB_ON_STARTUP=true` | Quick local iteration with `uvicorn` only | On startup the app drops and recreates all tables from models, then seeds the superuser and default `user` role. Do not use with existing data. |
+| Alembic (`RESET_DB_ON_STARTUP=false`, default) | Normal development, tests, and production | Applies versioned migrations; safe for existing databases. |
 
-Ensure env files are in place (`env-files/.env.auth` is used by the dev stack). The repo development stack serves HTTP only on port 80, so keep `PROD_RUN=false` there. Keep `RESET_DB_ON_STARTUP=false` so the entrypoint applies Alembic migrations instead of resetting the schema:
+### Apply migrations
 
-Run development stack:
+From the `auth_api` directory:
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build -d
+set -a && source .env && set +a
+uv run alembic upgrade head
 ```
 
-The API is exposed through nginx at `/auth/api`:
+After the first migration on a fresh database, create bootstrap data:
 
-OpenAPI docs: http://127.0.0.1/auth/api/docs  
-Jaeger UI: http://127.0.0.1:16686
+```bash
+uv run python -m app.commands.create_default_role
+uv run python -m app.commands.create_superuser
+```
 
-The admin panel uses this service for staff login (`AUTH_API_LOGIN_URL=http://auth-api/auth/api/token` inside Docker). Mount the same public key into dependent services.
+`create_superuser` uses `SUPERUSER_EMAIL` and `SUPERUSER_PASSWORD` from the environment, or prompts interactively.
+
+When the app starts through `run_app.sh`, it runs `alembic upgrade head` and both bootstrap commands automatically before serving traffic.
+
+### Create a new migration
+
+After changing models in `app/db/models.py`:
+
+```bash
+set -a && source .env && set +a
+uv run alembic revision --autogenerate -m "short description"
+uv run alembic upgrade head
+```
+
+Review the generated script in `alembic/versions/` before applying.
 
 ## Running tests
 
@@ -172,7 +190,7 @@ Functional tests exercise the live API against PostgreSQL, Redis, and a Yandex O
 
 ### Test stack (Docker)
 
-1. Place the JWT key pair at `certs/jwt-private.pem` and `certs/jwt-public.pem` (used by the API container and the test suite). The test stack uses `.env.tests` with `PROD_RUN=false` and `RESET_DB_ON_STARTUP=false` (Alembic migrations on startup, same as other container runs).
+1. JWT keys for the test stack live in `tests/docker/certs/` (included in the repo). Compose mounts them into the API container; pytest reads the same public key from that path. The stack loads `.env.tests` with `PROD_RUN=false` and `RESET_DB_ON_STARTUP=false`; migrations and bootstrap run automatically via `run_app.sh`.
 
 2. Start PostgreSQL, Redis, the Yandex mock, and the API:
    ```bash
