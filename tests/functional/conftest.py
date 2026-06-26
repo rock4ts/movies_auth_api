@@ -20,7 +20,7 @@ _test_password_hash = PasswordHash.recommended()
 
 @lru_cache
 def _jwt_public_key() -> bytes:
-    with open("certs/jwt-public.pem", "rb") as key_file:
+    with open("tests/docker/certs/jwt-public.pem", "rb") as key_file:
         return key_file.read()
 
 
