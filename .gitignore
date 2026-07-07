@@ -164,3 +164,4 @@ cython_debug/
 .vscode/
 requests.http
 /certs
+.DS_Store
