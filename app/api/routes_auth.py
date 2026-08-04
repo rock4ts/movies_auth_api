@@ -1,25 +1,22 @@
 from typing import Annotated
-from uuid import uuid4
 
 from fastapi import APIRouter, Response, status
 from fastapi.params import Depends
 
+from app.core.config import jwt_settings, settings
 from app.db.models import User
 from app.schemas.auth import AccessTokenResponse, UserLoginData
-from app.schemas.misc import RequestMeta
+from app.schemas.misc import DeviceInfo, RequestMeta
 from app.services.service_auth import AuthService, RefreshTokenError, WrongCredentialsError
 
-from app.core.config import jwt_settings, settings
-
 from .dependencies import (
-    get_token_user,
     get_auth_service,
     get_device_info,
     get_refresh_token,
     get_request_meta,
+    get_token_user,
     rate_limit_route_by_ip,
 )
-from app.schemas.misc import DeviceInfo
 from .exceptions import CredentialsHttpException, RefreshHttpException
 
 router = APIRouter()
@@ -37,7 +34,7 @@ async def issue_tokens(
     try:
         tokens = await auth_service.login_user(login_data, request_meta, device_info)
     except WrongCredentialsError:
-        raise CredentialsHttpException()
+        raise CredentialsHttpException() from None
     response.set_cookie(
         key="refresh",
         value=tokens.refresh,
@@ -67,7 +64,7 @@ async def refresh_tokens(
     try:
         tokens = await auth_service.refresh_tokens(refresh_token)
     except RefreshTokenError:
-        raise RefreshHttpException("Invalid refresh token")
+        raise RefreshHttpException("Invalid refresh token") from None
 
     response.set_cookie(
         key="refresh",
@@ -90,7 +87,7 @@ async def logout(
     try:
         await auth_service.logout(refresh_token)
     except RefreshTokenError:
-        raise RefreshHttpException("Invalid refresh token")
+        raise RefreshHttpException("Invalid refresh token") from None
     response.delete_cookie(key="refresh")
     response.status_code = status.HTTP_200_OK
     return response

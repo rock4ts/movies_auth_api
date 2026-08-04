@@ -4,9 +4,10 @@ from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.config import DEFAULT_ROLE_TITLE, DEFAULT_ROLE_ACCESS_LABELS
+from app.core.config import DEFAULT_ROLE_ACCESS_LABELS, DEFAULT_ROLE_TITLE
+
+from .clients import async_session, engine
 from .models import ProjectBase, Role, User
-from .clients import engine, async_session
 
 logger = logging.getLogger(__name__)
 password_hash = PasswordHash.recommended()

@@ -1,7 +1,7 @@
-from http import HTTPStatus
 import json
-from typing import Any
 import uuid
+from http import HTTPStatus
+from typing import Any
 
 import pytest
 

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import json
+import uuid
 from collections.abc import AsyncGenerator, Callable
 from http import HTTPStatus
 from typing import Any
 from urllib.parse import parse_qs, urlparse
-import json
-import uuid
 
 import httpx
 import pytest_asyncio

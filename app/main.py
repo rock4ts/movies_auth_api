@@ -5,21 +5,19 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 
-from app.api import router_user, router_auth, router_role, router_yandexid
+from app.api import router_auth, router_role, router_user, router_yandexid
+from app.api.middleware import RequestIdMiddleware
 
 # from app.api.mock import router as mock_router
-
 from app.core.config import settings
 from app.core.logging import LOGGING_CONFIG
-from app.api.middleware import RequestIdMiddleware
 from app.core.tracing import configure_tracing
 from app.db.helpers import (
-    get_or_create_default_role,
     create_all_tables,
     create_superuser,
     drop_all_tables,
+    get_or_create_default_role,
 )
-
 
 logging.config.dictConfig(LOGGING_CONFIG)
 

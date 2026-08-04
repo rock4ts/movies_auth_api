@@ -1,8 +1,7 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-
-from app.core.config import settings, db_settings, redis_settings
-
 from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from app.core.config import db_settings, redis_settings, settings
 
 # Persistance DB
 engine = create_async_engine(db_settings.async_url, echo=settings.debug, future=True)

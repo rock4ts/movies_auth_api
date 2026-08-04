@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import jwt
 import pydantic
@@ -12,9 +12,8 @@ from app.db.models import User
 from app.schemas.auth import RefreshTokenPayload, TokenData, UserLoginData
 from app.schemas.misc import DeviceInfo, RequestMeta
 
-from .service_base import BaseService
 from .helpers import build_login_history, issue_token_pair
-
+from .service_base import BaseService
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -30,7 +29,6 @@ class RefreshTokenError(Exception):
 
 
 class AuthService(BaseService):
-
     async def login_user(
         self,
         login_data: UserLoginData,
@@ -68,18 +66,18 @@ class AuthService(BaseService):
             except jwt.ExpiredSignatureError as exc:
                 log_handled_exception(logger, "Refresh token expired", exc)
                 span.set_attribute("auth.result", "expired_token")
-                raise RefreshTokenError("Token has expired")
+                raise RefreshTokenError("Token has expired") from None
             except jwt.InvalidTokenError as exc:
                 log_handled_exception(logger, "Invalid refresh token", exc)
                 span.set_attribute("auth.result", "invalid_token")
-                raise RefreshTokenError("Invalid token")
+                raise RefreshTokenError("Invalid token") from None
 
             try:
                 payload = RefreshTokenPayload.model_validate(payload)
             except pydantic.ValidationError as exc:
                 log_handled_exception(logger, "Invalid refresh token payload", exc)
                 span.set_attribute("auth.result", "invalid_payload")
-                raise RefreshTokenError("Invalid token payload")
+                raise RefreshTokenError("Invalid token payload") from None
 
             if payload.type != "refresh":
                 span.set_attribute("auth.result", "wrong_token_type")
@@ -105,7 +103,7 @@ class AuthService(BaseService):
             with tracer.start_as_current_span("auth.refresh.blacklist_previous"):
                 await self.blacklist_token(
                     str(payload.jti),
-                    max(1, payload.exp - int(datetime.now(timezone.utc).timestamp())),
+                    max(1, payload.exp - int(datetime.now(UTC).timestamp())),
                 )
 
             tokens = issue_token_pair(user)
@@ -132,20 +130,20 @@ class AuthService(BaseService):
             except jwt.InvalidTokenError as exc:
                 log_handled_exception(logger, "Invalid logout token", exc)
                 span.set_attribute("auth.result", "invalid_token")
-                raise RefreshTokenError("Invalid token")
+                raise RefreshTokenError("Invalid token") from None
 
             try:
                 payload = RefreshTokenPayload.model_validate(payload_dict)
             except pydantic.ValidationError as exc:
                 log_handled_exception(logger, "Invalid logout token payload", exc)
                 span.set_attribute("auth.result", "invalid_payload")
-                raise RefreshTokenError("Invalid token payload")
+                raise RefreshTokenError("Invalid token payload") from None
 
             if payload.type != "refresh":
                 span.set_attribute("auth.result", "wrong_token_type")
                 raise RefreshTokenError("Token is not a refresh token")
 
-            ttl = payload.exp - int(datetime.now(timezone.utc).timestamp())
+            ttl = payload.exp - int(datetime.now(UTC).timestamp())
 
             if ttl <= 0:
                 span.set_attribute("auth.result", "expired_token")

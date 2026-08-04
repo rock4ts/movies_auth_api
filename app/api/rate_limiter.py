@@ -10,9 +10,9 @@ from redis import RedisError
 from redis.asyncio import Redis
 
 from app.core.config import rate_limit_settings
+from app.core.request_context import get_client_ip
 
 from .exceptions import RateLimitHttpException
-from app.core.request_context import get_client_ip
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)

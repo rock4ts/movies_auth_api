@@ -1,14 +1,15 @@
 import logging
 
 import sqlalchemy.exc as sa_exc
-from sqlalchemy import select
 from pydantic import UUID4
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import log_handled_exception
 from app.db.helpers import DEFAULT_ROLE_TITLE, get_or_create_default_role
 from app.db.models import Role, User
 from app.schemas.role import AssignRoleIn, ReadRoleOut, RoleCreateIn, RoleCreateOut, UpdateRoleIn
+
 from .service_base import UserNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,6 @@ class ProtectedRoleError(Exception):
 
 
 class RoleService:
-
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -40,7 +40,7 @@ class RoleService:
         except sa_exc.IntegrityError as exc:
             log_handled_exception(logger, "Role already exists (integrity)", exc)
             await self.session.rollback()
-            raise RoleAlreadyExistsError()
+            raise RoleAlreadyExistsError() from None
 
     async def remove_role(self, role_id: UUID4) -> None:
         role = await self.session.get(Role, role_id)
@@ -64,7 +64,7 @@ class RoleService:
         except sa_exc.IntegrityError as exc:
             log_handled_exception(logger, "Role title conflict (integrity)", exc)
             await self.session.rollback()
-            raise RoleAlreadyExistsError()
+            raise RoleAlreadyExistsError() from None
 
     async def get_all_roles(self) -> list[ReadRoleOut]:
         roles = await self.session.execute(select(Role))

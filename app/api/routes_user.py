@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.db.models import User
 from app.schemas.user import (
@@ -11,7 +11,6 @@ from app.schemas.user import (
     UserCreateOut,
     UserReadOut,
 )
-
 from app.services.service_base import UserNotFoundError
 from app.services.service_user import (
     EmailAlreadyExistsError,
@@ -19,6 +18,7 @@ from app.services.service_user import (
     UserService,
     WrongPasswordError,
 )
+
 from .dependencies import get_token_user, get_user_service, rate_limit_route_by_ip
 from .exceptions import UserNotFoundHttpError, WrongPasswordHttpError
 
@@ -34,7 +34,7 @@ async def create_user(
     try:
         user = await user_service.create_user(user_data=user_data)
     except UserAlreadyExistsError:
-        raise HTTPException(status_code=400, detail="User already exists")
+        raise HTTPException(status_code=400, detail="User already exists") from None
     return UserCreateOut.model_validate(user, from_attributes=True)
 
 
@@ -47,7 +47,7 @@ async def user_info(
         user = await user_service.get_user_info(user_id=user.id)
         return UserReadOut.model_validate(user, from_attributes=True)
     except UserNotFoundError:
-        raise UserNotFoundHttpError()
+        raise UserNotFoundHttpError() from None
 
 
 @router.patch("/me/email")
@@ -59,9 +59,9 @@ async def change_email(
     try:
         await user_service.change_email(change_email_data=change_email_data, user=user)
     except WrongPasswordError:
-        raise WrongPasswordHttpError()
+        raise WrongPasswordHttpError() from None
     except EmailAlreadyExistsError:
-        raise HTTPException(status_code=400, detail="Email already exists")
+        raise HTTPException(status_code=400, detail="Email already exists") from None
     return Response(status_code=status.HTTP_200_OK)
 
 
@@ -74,7 +74,7 @@ async def change_password(
     try:
         await user_service.change_password(change_password_data=change_password_data, user=user)
     except WrongPasswordError:
-        raise WrongPasswordHttpError()
+        raise WrongPasswordHttpError() from None
     return Response(status_code=status.HTTP_200_OK)
 
 

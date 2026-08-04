@@ -3,29 +3,27 @@ from collections.abc import AsyncGenerator
 from typing import Annotated, cast
 from uuid import UUID, uuid4
 
-
+import jwt
 import user_agents
 from fastapi import Request
 from fastapi.params import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-import jwt
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import jwt_settings
-from app.core.logging import log_handled_exception
+from app.core.request_context import get_client_ip
 from app.db.clients import async_session, redis
 from app.db.models import User
-from app.core.request_context import get_client_ip
-from .rate_limiter import RedisFixedWindowRateLimiter, enforce_rate_limit, ip_per_route_rule
-
 from app.schemas.auth import AccessTokenPayload
 from app.schemas.misc import DeviceInfo, RequestMeta
 from app.services.service_auth import AuthService
 from app.services.service_role import RoleService
 from app.services.service_user import UserService
 from app.services.service_yandexid import YandexIdService
+
 from .exceptions import CredentialsHttpException, RefreshHttpException
+from .rate_limiter import RedisFixedWindowRateLimiter, enforce_rate_limit, ip_per_route_rule
 
 logger = logging.getLogger(__name__)
 oauth2_scheme = HTTPBearer()
@@ -125,15 +123,15 @@ def get_access_token_payload(
             ),
         )
     except jwt.ExpiredSignatureError:
-        raise CredentialsHttpException("Token has expired")
+        raise CredentialsHttpException("Token has expired") from None
     except jwt.InvalidTokenError as e:
         logger.error(f"Invalid token: {str(e)}")
-        raise CredentialsHttpException("Invalid token")
+        raise CredentialsHttpException("Invalid token") from None
 
     try:
         validated_payload = AccessTokenPayload.model_validate(payload)
     except ValidationError:
-        raise CredentialsHttpException("Invalid token payload")
+        raise CredentialsHttpException("Invalid token payload") from None
     if validated_payload.type != "access":
         raise CredentialsHttpException("Token is not an access token")
     return validated_payload

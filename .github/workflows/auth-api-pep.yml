@@ -1,0 +1,39 @@
+name: auth-api-pep
+
+on:
+  pull_request:
+    paths:
+      - "**/*.py"
+      - "pyproject.toml"
+      - "requirements-dev.txt"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/auth-api-pep.yml"
+  push:
+    paths:
+      - "**/*.py"
+      - "pyproject.toml"
+      - "requirements-dev.txt"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/auth-api-pep.yml"
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install development requirements
+        run: pip install -r requirements-dev.txt
+
+      - name: Check formatting
+        run: ruff format --check .
+
+      - name: Run lint
+        run: ruff check .

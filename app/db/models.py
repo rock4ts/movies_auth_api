@@ -1,18 +1,19 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import UUID4
-from sqlalchemy import JSON, MetaData
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import (
-    ForeignKey,
-    Index,
-    PrimaryKeyConstraint,
+    JSON,
     TIMESTAMP,
     UUID,
+    ForeignKey,
+    Index,
+    MetaData,
+    PrimaryKeyConstraint,
     UniqueConstraint,
     func,
 )
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from app.core.enums import AccessLabel
 
@@ -35,12 +36,12 @@ class ProjectBaseCreatedUpdated(ProjectBase):
     __abstract__ = True
 
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), default=datetime.now(timezone.utc)
+        TIMESTAMP(timezone=True), default=datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
-        default=datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc),
+        default=datetime.now(UTC),
+        onupdate=datetime.now(UTC),
     )
 
 
@@ -67,8 +68,8 @@ class User(ProjectBaseWithId, ProjectBaseCreatedUpdated):
 
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
-        default=datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc),
+        default=datetime.now(UTC),
+        onupdate=datetime.now(UTC),
     )
     oauth_accounts: Mapped[set["OAuthAccount"]] = relationship(back_populates="user")
 
@@ -114,7 +115,7 @@ class LoginHistory(ProjectBase):
     device_id: Mapped[str | None] = mapped_column(nullable=True)
     logged_in_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )

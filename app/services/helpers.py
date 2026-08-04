@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import jwt
@@ -27,7 +27,7 @@ def _resolve_role_claims(user: User) -> tuple[str | None, list[AccessLabel]]:
 
 
 def create_access_token(user: User) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     role_title, access_labels = _resolve_role_claims(user)
     payload = AccessTokenPayload(
         type="access",
@@ -44,7 +44,7 @@ def create_access_token(user: User) -> str:
 
 
 def create_refresh_token(user: User) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = RefreshTokenPayload(
         type="refresh",
         sub=user.id,

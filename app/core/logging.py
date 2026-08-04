@@ -1,9 +1,9 @@
 import logging
-from .config import settings
+
 from opentelemetry import trace
 
+from .config import settings
 from .request_context import get_request_id
-
 
 LOG_LEVEL = "DEBUG" if settings.debug else "INFO"
 
@@ -42,7 +42,10 @@ LOGGING_CONFIG = {
         "verbose": {"format": LOG_FORMAT},
         "default": {
             "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": "%(levelprefix)s request_id=%(request_id)s trace_id=%(trace_id)s span_id=%(span_id)s %(message)s",
+            "fmt": (
+                "%(levelprefix)s request_id=%(request_id)s "
+                "trace_id=%(trace_id)s span_id=%(span_id)s %(message)s"
+            ),
             "use_colors": None,
         },
         "access": {

@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 DEFAULT_ROLE_TITLE = "user"
 DEFAULT_ROLE_ACCESS_LABELS = ["free"]

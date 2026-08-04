@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from pydantic import UUID4, BaseModel, EmailStr, Field
+from pydantic import UUID4, BaseModel, EmailStr
+
 from .role import ReadRoleOut
 
 

@@ -10,16 +10,16 @@ from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 import httpx
-from opentelemetry import trace
 import pydantic
+from opentelemetry import trace
 from redis import RedisError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from app.core.config import yandexid_settings
-from app.core.logging import log_handled_exception
 from app.core.enums import OAuthProvider
+from app.core.logging import log_handled_exception
 from app.db.clients import redis
 from app.db.helpers import get_or_create_default_role
 from app.db.models import OAuthAccount, User
@@ -33,8 +33,8 @@ from app.schemas.yandexid import (
     YandexIdUserRequestParams,
 )
 
-from .service_base import BaseService
 from .helpers import build_login_history, issue_token_pair
+from .service_base import BaseService
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -183,7 +183,8 @@ class YandexIdService(BaseService):
                 device_name=device_info.device_name if device_info else None,
             )
             try:
-                async with httpx.AsyncClient(timeout=yandexid_settings.http_timeout_seconds) as client:
+                timeout = yandexid_settings.http_timeout_seconds
+                async with httpx.AsyncClient(timeout=timeout) as client:
                     response = await client.post(
                         yandexid_settings.token_url,
                         data=payload.model_dump(exclude_none=True),
@@ -218,7 +219,8 @@ class YandexIdService(BaseService):
         with tracer.start_as_current_span("auth.oauth.user_info") as span:
             params = YandexIdUserRequestParams().model_dump(exclude_none=True)
             try:
-                async with httpx.AsyncClient(timeout=yandexid_settings.http_timeout_seconds) as client:
+                timeout = yandexid_settings.http_timeout_seconds
+                async with httpx.AsyncClient(timeout=timeout) as client:
                     response = await client.get(
                         yandexid_settings.user_info_url,
                         params=params,

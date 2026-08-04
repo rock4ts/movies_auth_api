@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, HttpUrl, UUID4
+from pydantic import UUID4, BaseModel, EmailStr, HttpUrl
 
 
 class YandexIdAuthorizeParams(BaseModel):
@@ -52,7 +52,9 @@ class YandexIdUserData(BaseModel):
     login: str
     id: int | str  # Уникальный идентификатор пользователя Яндекса.
     client_id: str
-    psuid: str  # Идентификатор авторизованного пользователя в Яндексе. Формируется на стороне Яндекса на основе пары client_id и user_id
+    # Идентификатор авторизованного пользователя в Яндексе.
+    # Формируется на стороне Яндекса на основе пары client_id и user_id
+    psuid: str
     default_email: EmailStr
     first_name: str
     last_name: str

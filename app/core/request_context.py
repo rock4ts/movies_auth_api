@@ -1,8 +1,8 @@
 from contextvars import ContextVar, Token
 
 from fastapi import Request
-from app.core.config import settings
 
+from app.core.config import settings
 
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 

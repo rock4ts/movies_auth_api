@@ -1,14 +1,13 @@
+import json
+import uuid
 from collections.abc import AsyncGenerator, Callable
 from functools import lru_cache
 from http import HTTPStatus
-import json
 from typing import Any
-import uuid
 
 import asyncpg
 import httpx
 import jwt
-import pytest
 import pytest_asyncio
 from pwdlib import PasswordHash
 from redis.asyncio import Redis
@@ -150,7 +149,8 @@ async def create_db_role(db_connection: asyncpg.Connection):
         role_id = uuid.uuid4()
         await db_connection.execute(
             """
-            INSERT INTO roles (id, title, access_labels, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW());
+            INSERT INTO roles (id, title, access_labels, created_at, updated_at)
+            VALUES ($1, $2, $3, NOW(), NOW());
             """,
             str(role_id),
             role_title,

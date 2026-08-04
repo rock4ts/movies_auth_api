@@ -1,8 +1,8 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Response, status
 from fastapi.params import Depends
 from pydantic import UUID4
-
 
 from app.api.exceptions import (
     ProtectedRoleHttpError,
@@ -13,9 +13,9 @@ from app.api.exceptions import (
 from app.schemas.role import (
     AssignRoleIn,
     ReadRoleOut,
+    RevokeRoleIn,
     RoleCreateIn,
     RoleCreateOut,
-    RevokeRoleIn,
     UpdateRoleIn,
 )
 from app.services.service_base import UserNotFoundError
@@ -25,8 +25,8 @@ from app.services.service_role import (
     RoleNotFoundError,
     RoleService,
 )
-from .dependencies import get_role_service, ensure_superuser
 
+from .dependencies import ensure_superuser, get_role_service
 
 router = APIRouter(
     dependencies=[
@@ -43,7 +43,7 @@ async def create_role(
     try:
         return await role_service.create_role(role_data_in)
     except RoleAlreadyExistsError:
-        raise RoleAlreadyExistsHttpError()
+        raise RoleAlreadyExistsHttpError() from None
 
 
 @router.get("")
@@ -61,9 +61,9 @@ async def delete_role(
         await role_service.remove_role(role_id)
         return Response(status_code=status.HTTP_200_OK)
     except RoleNotFoundError:
-        raise RoleNotFoundHttpError()
+        raise RoleNotFoundHttpError() from None
     except ProtectedRoleError:
-        raise ProtectedRoleHttpError()
+        raise ProtectedRoleHttpError() from None
 
 
 @router.patch("/{role_id}")
@@ -76,11 +76,11 @@ async def modify_role(
         await role_service.modify_role(role_id, modify_role_data)
         return Response(status_code=status.HTTP_200_OK)
     except RoleNotFoundError:
-        raise RoleNotFoundHttpError()
+        raise RoleNotFoundHttpError() from None
     except RoleAlreadyExistsError:
-        raise RoleAlreadyExistsHttpError()
+        raise RoleAlreadyExistsHttpError() from None
     except ProtectedRoleError:
-        raise ProtectedRoleHttpError()
+        raise ProtectedRoleHttpError() from None
 
 
 @router.post("/assign")
@@ -92,9 +92,9 @@ async def assign_role(
         await role_service.assign_role(assign_role_data)
         return Response(status_code=status.HTTP_200_OK)
     except RoleNotFoundError:
-        raise RoleNotFoundHttpError()
+        raise RoleNotFoundHttpError() from None
     except UserNotFoundError:
-        raise UserNotFoundHttpError()
+        raise UserNotFoundHttpError() from None
 
 
 @router.post("/revoke")
@@ -106,4 +106,4 @@ async def revoke_role(
         await role_service.revoke_role(revoke_role_data.user_id)
         return Response(status_code=status.HTTP_200_OK)
     except UserNotFoundError:
-        raise UserNotFoundHttpError()
+        raise UserNotFoundHttpError() from None

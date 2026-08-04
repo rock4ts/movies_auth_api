@@ -4,9 +4,10 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Request, Response
 from fastapi.params import Depends
 from fastapi.responses import RedirectResponse
+
 from app.core.config import jwt_settings, settings, yandexid_settings
 from app.schemas.auth import AccessTokenResponse
-from app.schemas.misc import RequestMeta
+from app.schemas.misc import DeviceInfo, RequestMeta
 from app.services.service_yandexid import (
     YandexIdAccountConflictError,
     YandexIdProviderError,
@@ -22,7 +23,6 @@ from .dependencies import (
     get_yandexid_service,
     rate_limit_route_by_ip,
 )
-from app.schemas.misc import DeviceInfo
 from .exceptions import (
     OAuthCallbackHttpException,
     OAuthProviderHttpException,
@@ -44,7 +44,7 @@ def validate_login_state(request: Request, state: UUID) -> None:
     try:
         cookie_state = UUID(cookie_state_raw)
     except ValueError:
-        raise OAuthStateHttpException("Cookie state is invalid or expired")
+        raise OAuthStateHttpException("Cookie state is invalid or expired") from None
     if state != cookie_state:
         raise OAuthStateHttpException("Login state is invalid or expired")
 
@@ -58,7 +58,7 @@ async def oauth_login(
     try:
         redirect_url = await yandexid_service.build_login_redirect(state)
     except YandexIdProviderError:
-        raise OAuthProviderHttpException("Failed to initialize Yandex OAuth")
+        raise OAuthProviderHttpException("Failed to initialize Yandex OAuth") from None
 
     response = RedirectResponse(
         url=redirect_url,
@@ -92,15 +92,15 @@ async def confirm_login_yandex(
             code=code, state=state, request_meta=request_meta, device_info=device_info
         )
     except YandexIdStateError:
-        raise OAuthStateHttpException()
+        raise OAuthStateHttpException() from None
     except YandexIdTokenError:
-        raise OAuthProviderHttpException("Error during token exchange with provider")
+        raise OAuthProviderHttpException("Error during token exchange with provider") from None
     except YandexIdUserInfoError:
-        raise OAuthProviderHttpException("Error during user profile fetch from provider")
+        raise OAuthProviderHttpException("Error during user profile fetch from provider") from None
     except YandexIdProviderError:
-        raise OAuthProviderHttpException()
+        raise OAuthProviderHttpException() from None
     except YandexIdAccountConflictError:
-        raise OAuthCallbackHttpException("Yandex account link conflict")
+        raise OAuthCallbackHttpException("Yandex account link conflict") from None
 
     response.delete_cookie(key="state")
     response.set_cookie(

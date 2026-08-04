@@ -2,8 +2,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.db.models import User
 from app.db.helpers import password_hash
+from app.db.models import User
 
 
 class UserNotFoundError(Exception):

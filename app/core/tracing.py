@@ -16,7 +16,6 @@ from opentelemetry.sdk.trace.sampling import (
 
 from app.core.config import tracing_settings
 
-
 logger = logging.getLogger(__name__)
 
 _tracing_configured = False

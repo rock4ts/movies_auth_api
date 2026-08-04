@@ -1,6 +1,5 @@
 # from async_fastapi_jwt_auth import AuthJWT
 import base64
-from enum import StrEnum
 from functools import cached_property
 
 from pydantic import Field

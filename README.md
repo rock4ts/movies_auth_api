@@ -122,7 +122,7 @@ Database, Redis, Yandex endpoints, and tracing settings — see `.env.example`. 
 5. Configure Yandex OAuth credentials when testing the real provider.
 6. Sync dependencies:
    ```bash
-   uv sync
+   uv sync --group dev
    ```
 7. Prepare the database — see [Database migrations](#database-migrations) (Alembic or `RESET_DB_ON_STARTUP`).
 
@@ -218,10 +218,34 @@ uv run pytest tests/functional/testunits/yandexid
 
 Override host or port via environment variables accepted by `tests/functional/settings.py` (for example, `AUTH_TEST_API_URL`, `POSTGRES_PORT`, `REDIS_PORT`).
 
+## Code quality (PEP pipeline)
+
+Install development-only tooling and enable hooks from the `auth_api` directory:
+
+```bash
+uv sync --group dev
+uv run pre-commit install
+```
+
+Run checks manually:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+```
+
+Auto-format and apply safe lint fixes:
+
+```bash
+uv run ruff check --fix .
+uv run ruff format .
+```
+
 ## Updating dependencies
 
 `pyproject.toml` is the source of truth for local development. After changing dependencies, export them for Docker builds:
 
 ```bash
-uv export --format requirements-txt --no-hashes > requirements.txt
+uv export --format requirements-txt --no-dev --no-hashes -o requirements.txt
+uv export --format requirements-txt --only-dev --no-hashes -o requirements-dev.txt
 ```

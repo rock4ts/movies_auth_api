@@ -1,11 +1,12 @@
 import logging
 
+from opentelemetry import trace
 from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from opentelemetry import trace
 
 from app.core.logging import log_handled_exception
+from app.db.helpers import get_or_create_default_role
 from app.db.models import LoginHistory, User
 from app.schemas.user import (
     LoginDataOut,
@@ -13,7 +14,7 @@ from app.schemas.user import (
     UserChangePasswordIn,
     UserCreateIn,
 )
-from app.db.helpers import get_or_create_default_role
+
 from .service_base import BaseService, UserNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,9 @@ class UserService(BaseService):
                 log_handled_exception(logger, "User already exists (integrity)", exc)
                 await self.session.rollback()
                 span.set_attribute("auth.result", "already_exists")
-                raise UserAlreadyExistsError("User with this username or email already exists")
+                raise UserAlreadyExistsError(
+                    "User with this username or email already exists"
+                ) from None
             await self.session.refresh(user)
             span.set_attribute("auth.result", "success")
             return user
@@ -71,7 +74,7 @@ class UserService(BaseService):
         except IntegrityError as exc:
             log_handled_exception(logger, "Email already exists (integrity)", exc)
             await self.session.rollback()
-            raise EmailAlreadyExistsError("User with this email already exists")
+            raise EmailAlreadyExistsError("User with this email already exists") from None
 
     async def change_password(
         self,

@@ -124,7 +124,7 @@ async def test_yandex_callback_returns_bad_gateway_when_user_info_request_times_
         token_body=yandex_token_payload(),
         user_info_body=profile,
         user_info_delay_seconds=2.0,
-    ) # should be more than YANDEXID_HTTP_TIMEOUT_SECONDS in .env.tests
+    )  # should be more than YANDEXID_HTTP_TIMEOUT_SECONDS in .env.tests
 
     state, _ = await start_yandex_login(http_client)
     body, status, _ = await complete_yandex_callback(http_client, state)

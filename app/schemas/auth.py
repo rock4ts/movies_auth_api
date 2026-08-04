@@ -1,4 +1,5 @@
 from typing import Literal
+
 from pydantic import UUID4, BaseModel, EmailStr
 
 from app.core.enums import AccessLabel
