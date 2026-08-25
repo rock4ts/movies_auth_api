@@ -169,6 +169,7 @@ dependencies = [
     { name = "certifi" },
     { name = "cffi" },
     { name = "click" },
+    { name = "concurrent-log-handler" },
     { name = "cryptography" },
     { name = "dnspython" },
     { name = "email-validator" },
@@ -229,6 +230,7 @@ requires-dist = [
     { name = "certifi", specifier = "==2024.12.14" },
     { name = "cffi", specifier = "==1.17.1" },
     { name = "click", specifier = "==8.1.7" },
+    { name = "concurrent-log-handler", specifier = ">=0.9.29" },
     { name = "cryptography", specifier = "==44.0.0" },
     { name = "dnspython", specifier = "==2.7.0" },
     { name = "email-validator", specifier = "==2.2.0" },
@@ -358,6 +360,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
+]
+
+[[package]]
+name = "concurrent-log-handler"
+version = "0.9.29"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "portalocker" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9c/2c/ba185acc438cff6b58cd8f8dec27e7f4fcabf6968a1facbb6d0cacbde7fe/concurrent_log_handler-0.9.29.tar.gz", hash = "sha256:bc37a76d3f384cbf4a98f693ebd770543edc0f4cd5c6ab6bc70e9e1d7d582265", size = 42114, upload-time = "2026-02-22T18:18:25.758Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/f3/3e3188fdb3e53c6343fd1c7de41c55d4db626f07db3877eae77b28d58bd2/concurrent_log_handler-0.9.29-py3-none-any.whl", hash = "sha256:0d6c077fbaef2dae49a25975dcf72a602fe0a6a4ce80a3b7c37696d37e10459a", size = 32052, upload-time = "2026-02-22T18:18:24.558Z" },
 ]
 
 [[package]]
@@ -914,6 +928,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
+name = "portalocker"
+version = "4.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/92/d15473a60e4cb7bc450e10d3160d7d531d6fa8cb144e31395afd76cf4be2/portalocker-4.2.0.tar.gz", hash = "sha256:f4c5024903126159c4798e6aec6c32e30a0759db39bf795c0dbeb180a2e8c843", size = 259245, upload-time = "2026-08-22T00:22:15.62Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/49/abd8a4154c911cc6c247edb7195d14846b614314c58ae09cf710d7d56098/portalocker-4.2.0-py3-none-any.whl", hash = "sha256:b33a8ce7d9b74922123a6fe64c2d785c015e5e9049ce7f1db5bd44e288731460", size = 128016, upload-time = "2026-08-22T00:22:14.254Z" },
 ]
 
 [[package]]

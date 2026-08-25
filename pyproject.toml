@@ -13,6 +13,7 @@ dependencies = [
     "certifi==2024.12.14",
     "cffi==1.17.1",
     "click==8.1.7",
+    "concurrent-log-handler>=0.9.29",
     "cryptography==44.0.0",
     "dnspython==2.7.0",
     "email-validator==2.2.0",

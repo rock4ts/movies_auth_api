@@ -43,6 +43,8 @@ colorama==0.4.6 ; sys_platform == 'win32'
     # via
     #   click
     #   typer
+concurrent-log-handler==0.9.29
+    # via auth-api
 cryptography==44.0.0
     # via auth-api
 deprecated==1.3.1
@@ -156,6 +158,8 @@ packaging==24.2
     #   opentelemetry-instrumentation-sqlalchemy
 passlib==1.7.4
     # via auth-api
+portalocker==4.2.0
+    # via concurrent-log-handler
 protobuf==5.29.6
     # via
     #   googleapis-common-protos

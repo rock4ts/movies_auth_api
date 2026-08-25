@@ -114,6 +114,13 @@ class AppSettings(BaseSettings):
     debug: bool = False
     prod: bool = Field(default=False, validation_alias="PROD_RUN")
     reset_db_on_startup: bool = Field(default=False, validation_alias="RESET_DB_ON_STARTUP")
+    log_file_path: str | None = Field(default=None, validation_alias="LOG_FILE_PATH")
+    log_max_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        validation_alias="LOG_MAX_BYTES",
+        ge=1,
+    )
+    log_backup_count: int = Field(default=7, validation_alias="LOG_BACKUP_COUNT", ge=0)
     superuser_email: str = Field(default="admin@example.com", validation_alias="SUPERUSER_EMAIL")
     superuser_password: str = Field(default="password", validation_alias="SUPERUSER_PASSWORD")
     request_id_header: str = Field(default="x-request-id", validation_alias="REQUEST_ID_HEADER")

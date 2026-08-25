@@ -96,6 +96,7 @@ On startup, the service expects the schema to already match the current Alembic 
 - RS256 JWT (`pyjwt`, PEM key pair)
 - OpenTelemetry → Jaeger (optional)
 - Gunicorn + Uvicorn workers (production)
+- Multiprocess-safe structured JSON file logging
 - [uv](https://docs.astral.sh/uv/) for local dependency management
 
 ## Environment variables
@@ -110,8 +111,17 @@ On startup, the service expects the schema to already match the current Alembic 
 | `YANDEXID_REDIRECT_URL` | Redirect URI registered with Yandex |
 | `RATE_LIMIT_ENABLED` | Enable per-IP rate limiting (`true` by default) |
 | `TRACING_ENABLED` | Export traces to Jaeger when `true` |
+| `LOG_FILE_PATH` | Enable structured file logging and set the active JSON log path; unset to keep console-only logging |
+| `LOG_MAX_BYTES` | Rotate the active log after this many bytes (default: 10 MiB) |
+| `LOG_BACKUP_COUNT` | Number of rotated files retained (default: 7) |
 
 Database, Redis, Yandex endpoints, and tracing settings — see `.env.example`. Copy it to `.env` and adjust values for your environment.
+
+## Logging and ELK
+
+Console logging remains enabled for `docker compose logs`. When `LOG_FILE_PATH` is set, the service also writes one JSON object per line through a multiprocess-safe rotating handler, suitable for the four Gunicorn workers. Events include timestamp, level, logger, message, process ID, exception details, `request.id`, `trace.id`, and `span.id`.
+
+The portfolio Compose stack sets `LOG_FILE_PATH=/var/log/auth-api/app.json`, mounts that directory as a named volume, and has Filebeat forward it through Logstash to daily `auth-api-YYYY.MM.dd` indexes in the logging Elasticsearch cluster. Search the events in Kibana at `http://localhost/logs/`.
 
 ## Getting started
 
