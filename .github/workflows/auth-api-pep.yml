@@ -4,14 +4,28 @@ on:
   pull_request:
     paths:
       - "**/*.py"
+      - "tests/**"
+      - "Dockerfile"
+      - "docker-compose.tests.yaml"
+      - "run_app.sh"
+      - ".env.tests"
       - "pyproject.toml"
+      - "uv.lock"
+      - "requirements.txt"
       - "requirements-dev.txt"
       - ".pre-commit-config.yaml"
       - ".github/workflows/auth-api-pep.yml"
   push:
     paths:
       - "**/*.py"
+      - "tests/**"
+      - "Dockerfile"
+      - "docker-compose.tests.yaml"
+      - "run_app.sh"
+      - ".env.tests"
       - "pyproject.toml"
+      - "uv.lock"
+      - "requirements.txt"
       - "requirements-dev.txt"
       - ".pre-commit-config.yaml"
       - ".github/workflows/auth-api-pep.yml"
@@ -37,3 +51,49 @@ jobs:
 
       - name: Run lint
         run: ruff check .
+
+  functional-tests:
+    runs-on: ubuntu-latest
+    needs: ruff
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install test requirements
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Start test stack
+        run: docker compose -f docker-compose.tests.yaml up --build --detach
+
+      - name: Wait for Auth API
+        run: |
+          for attempt in {1..60}; do
+            if curl --silent --output /dev/null --max-time 2 http://127.0.0.1:8001; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Auth API did not become ready"
+          exit 1
+
+      - name: Run functional tests
+        run: python -m pytest tests/functional
+
+      - name: Show test stack logs
+        if: failure()
+        run: docker compose -f docker-compose.tests.yaml logs
+
+      - name: Stop test stack
+        if: always()
+        run: docker compose -f docker-compose.tests.yaml down --volumes --remove-orphans
