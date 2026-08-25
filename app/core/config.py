@@ -102,6 +102,13 @@ class TracingSettings(BaseSettings):
     )
 
 
+class SentrySettings(BaseSettings):
+    enabled: bool = Field(default=False, validation_alias="SENTRY_ENABLED")
+    dsn: str | None = Field(default=None, validation_alias="SENTRY_DSN")
+    environment: str = Field(default="development", validation_alias="SENTRY_ENVIRONMENT")
+    release: str | None = Field(default=None, validation_alias="SENTRY_RELEASE")
+
+
 class RateLimitSettings(BaseSettings):
     enabled: bool = Field(default=True, validation_alias="RATE_LIMIT_ENABLED")
     redis_prefix: str = Field(default="rate_limit", validation_alias="RATE_LIMIT_REDIS_PREFIX")
@@ -138,5 +145,6 @@ db_settings = PostgresSettings()
 redis_settings = RedisSettings()
 jwt_settings = JWTSettings()
 tracing_settings = TracingSettings()
+sentry_settings = SentrySettings()
 rate_limit_settings = RateLimitSettings()
 yandexid_settings = YandexIdSettings()

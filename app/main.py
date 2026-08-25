@@ -9,8 +9,10 @@ from app.api import router_auth, router_role, router_user, router_yandexid
 from app.api.middleware import RequestIdMiddleware
 
 # from app.api.mock import router as mock_router
-from app.core.config import settings
+from app.core.config import sentry_settings, settings
 from app.core.logging import LOGGING_CONFIG
+from app.core.request_context import get_request_id
+from app.core.sentry import configure_sentry
 from app.core.tracing import configure_tracing
 from app.db.helpers import (
     create_all_tables,
@@ -20,6 +22,11 @@ from app.db.helpers import (
 )
 
 logging.config.dictConfig(LOGGING_CONFIG)
+configure_sentry(
+    sentry_settings,
+    service_name="auth-api",
+    request_id_getter=get_request_id,
+)
 
 
 async def setup_for_development() -> None:

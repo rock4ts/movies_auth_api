@@ -95,6 +95,7 @@ On startup, the service expects the schema to already match the current Alembic 
 - Redis (refresh-token blocklist, rate limiting)
 - RS256 JWT (`pyjwt`, PEM key pair)
 - OpenTelemetry → Jaeger (optional)
+- Sentry error reporting (optional)
 - Gunicorn + Uvicorn workers (production)
 - Multiprocess-safe structured JSON file logging
 - [uv](https://docs.astral.sh/uv/) for local dependency management
@@ -111,17 +112,27 @@ On startup, the service expects the schema to already match the current Alembic 
 | `YANDEXID_REDIRECT_URL` | Redirect URI registered with Yandex |
 | `RATE_LIMIT_ENABLED` | Enable per-IP rate limiting (`true` by default) |
 | `TRACING_ENABLED` | Export traces to Jaeger when `true` |
+| `SENTRY_ENABLED` | Report unhandled errors to Sentry when `true` and `SENTRY_DSN` is set |
+| `SENTRY_DSN` | Sentry DSN; leave empty to keep Sentry off |
+| `SENTRY_ENVIRONMENT` | Sentry environment tag (for example, `development`) |
+| `SENTRY_RELEASE` | Optional release identifier |
 | `LOG_FILE_PATH` | Enable structured file logging and set the active JSON log path; unset to keep console-only logging |
 | `LOG_MAX_BYTES` | Rotate the active log after this many bytes (default: 10 MiB) |
 | `LOG_BACKUP_COUNT` | Number of rotated files retained (default: 7) |
 
-Database, Redis, Yandex endpoints, and tracing settings — see `.env.example`. Copy it to `.env` and adjust values for your environment.
+Database, Redis, Yandex endpoints, tracing, and Sentry settings — see `.env.example`. Copy it to `.env` and adjust values for your environment.
 
 ## Logging and ELK
 
 Console logging remains enabled for `docker compose logs`. When `LOG_FILE_PATH` is set, the service also writes one JSON object per line through a multiprocess-safe rotating handler, suitable for the four Gunicorn workers. Events include timestamp, level, logger, message, process ID, exception details, `request.id`, `trace.id`, and `span.id`.
 
 The portfolio Compose stack sets `LOG_FILE_PATH=/var/log/auth-api/app.json`, mounts that directory as a named volume, and has Filebeat forward it through Logstash to daily `auth-api-YYYY.MM.dd` indexes in the logging Elasticsearch cluster. Search the events in Kibana at `http://localhost/logs/`.
+
+## Error reporting (Sentry)
+
+Unhandled exceptions are sent to Sentry when `SENTRY_ENABLED=true` and `SENTRY_DSN` is set. Expected `HTTPException` responses (401, 404, 429, and similar) are ignored. Authorization headers, cookies, and request bodies are stripped; events are tagged with `service=auth-api` and the current `request.id`. Sentry performance tracing stays off — Jaeger remains the trace backend.
+
+The portfolio production stack uses a self-hosted Sentry at `http://sentry.localhost/`. Copy the **auth-api** project DSN from the UI, replace only the host with `sentry-api:9000`, and keep the project ID from that DSN. Tests set `SENTRY_ENABLED=false`.
 
 ## Getting started
 
@@ -188,6 +199,12 @@ uv run alembic upgrade head
 Review the generated script in `alembic/versions/` before applying.
 
 ## Running tests
+
+Sentry unit tests do not need Docker:
+
+```bash
+uv run pytest tests/test_sentry.py
+```
 
 Functional tests exercise the live API against PostgreSQL, Redis, and a Yandex OAuth mock. Default connection settings in `tests/functional/settings.py` match the ports published by `docker-compose.tests.yaml`:
 
